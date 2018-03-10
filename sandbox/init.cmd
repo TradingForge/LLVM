@@ -1,0 +1,1 @@
+set PATH=..\vs2017\Debug\bin;%PATH%
