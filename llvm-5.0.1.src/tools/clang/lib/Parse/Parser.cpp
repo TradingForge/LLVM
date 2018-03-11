@@ -608,7 +608,71 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
   }
 
   ParsedAttributesWithRange attrs(AttrFactory);
-  MaybeParseCXX11Attributes(attrs);
+
+  if (/*getLangOpts().MQL &&*/ Tok.is(tok::identifier) &&
+      Tok.getIdentifierInfo()->getName().equals("input")) {
+
+    // https://docs.mql4.com/basis/variables/inputvariables
+    // The input storage class defines the external variable. 
+    // The input modifier is indicated before the data type. 
+    // A variable with the input modifier can't be changed inside mql4-programs, 
+    // such variables can be accessed for reading only. 
+    // Values of input variables can be changed only by a user 
+    // from the program properties window.
+    // External variables are always reinitialized 
+    // immediately before the OnInit() is called.
+    //
+    // input int            MA_Period=13;
+    // input int            MA_Shift=0;
+    // input ENUM_MA_METHOD MA_Method=MODE_SMMA;
+    //
+    // Only treat the "input" identifier as a keyword
+    // if it's in the top-level context.
+    // In the top-level context, instead of handling "input" 
+    // as a proper storage class specifier,
+    // add __attribute__((annotate("{\"kind\": \"mql-input\"}")))
+    // to the declaration.
+    // The AST consumer is expected to take a relevant action
+    // on seeing the attribute.
+    auto AttrName = PP.getIdentifierInfo("annotate");
+    ArgsVector ArgExprs;
+
+    StringRef Literal = R"({"kind": "mql-input"})";
+
+    QualType CharTyConst = Actions.Context.CharTy;
+    // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
+    if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
+      CharTyConst.addConst();
+
+    auto CharByteWidth = PP.getTargetInfo().getCharWidth() / 8;
+    auto NumStringChars = Literal.size() / CharByteWidth;
+
+    // Get an array type for the string, according to C99 6.4.5.  This includes
+    // the nul terminator character as well as the string length for pascal
+    // strings.
+    QualType StrTy = Actions.Context.getConstantArrayType(CharTyConst,
+                                   llvm::APInt(32, NumStringChars+1),
+                                   ArrayType::Normal, 0);
+
+    SmallVector<SourceLocation, 1> StringTokLocs = { SourceLocation() };
+
+    // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
+    StringLiteral *Lit = StringLiteral::Create(Actions.Context, Literal,
+                                              StringLiteral::Ascii, /*Pascal=*/false, StrTy,
+                                              &StringTokLocs[0],
+                                              StringTokLocs.size());
+    ExprResult ArgExpr(Lit);
+    ArgExprs.push_back(ArgExpr.get());
+
+    attrs.addNew(AttrName, SourceRange(Tok.getLocation(), Tok.getLastLoc()), 
+                 /*ScopeName=*/nullptr, /*ScopeLoc=*/SourceLocation(),
+                 /*args=*/ArgExprs.data(), /*numArgs=*/ArgExprs.size(), AttributeList::AS_GNU);
+
+    ConsumeToken();
+  }
+  else {
+    MaybeParseCXX11Attributes(attrs);
+  }
 
   Result = ParseExternalDeclaration(attrs);
   return false;
