@@ -1,0 +1,63 @@
+IMPORTANT! In Visual Studio you must build the ALL_BUILD target only, unless you want to compile everything.
+
+cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_BUILD_TYPE=Debug –DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_TARGETS_TO_BUILD=X86 -D"CMAKE_INSTALL_PREFIX=C:\llvm" -Thost=x64 ..\llvm-5.0.1.src 
+
+cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_BUILD_TYPE=Debug -DLLVM_COMPILER_JOBS=1 –DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_TARGETS_TO_BUILD=X86 -D"CMAKE_INSTALL_PREFIX=C:\llvm" -Thost=x64 ..\llvm-5.0.1.src 
+-DLLVM_COMPILER_JOBS=4 
+–DLLVM_OPTIMIZED_TABLEGEN=ON
+-DLLVM_TARGETS_TO_BUILD="X86"
+
+https://stackoverflow.com/questions/15036909/clang-how-to-list-supported-target-architectures
+
+// -DLLVM_TARGETS_TO_BUILD="X86;PowerPC"
+
+
+***
+
+LLVM_COMPILER_JOBS:STRING
+Specifies the maximum number of parallel compiler jobs to use per project when building with msbuild or Visual Studio. Only supported for the Visual Studio 2010 CMake generator. 0 means use all processors. Default is 0.
+
+***
+
+https://cmake.org/pipermail/cmake/2010-February/035174.html
+http://lists.llvm.org/pipermail/cfe-commits/Week-of-Mon-20130902/087614.html
+
+Thanks John, it has been a painful cmake experience to turn off incremental
+linking for debug builds.
+
+Apparently, the SET(MSVC_INCREMENTAL_DEFAULT ON) has to appear before the
+PROJECT line, otherwise it doesn't work.
+Here is the solution that works for me, hope this saves others time:
+
+----------------------------------
+
+/*
+
+string(REPLACE <match_string>
+       <replace_string> <output variable>
+       <input> [<input>...])
+
+*/
+
+foreach(t EXE SHARED MODULE)
+  string(REPLACE "/debug" "/debug:fastlink" CMAKE_${t}_LINKER_FLAGS_DEBUG ${CMAKE_${t}_LINKER_FLAGS_DEBUG})
+endforeach()
+
+
+STRING(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replacementFlags
+${CMAKE_EXE_LINKER_FLAGS_DEBUG})
+SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "/INCREMENTAL:NO ${replacementFlags}" )
+
+foreach(t EXE SHARED MODULE)
+  string(APPEND CMAKE_${t}_LINKER_FLAGS_INIT " ${_MACHINE_ARCH_FLAG}")
+  if (CMAKE_COMPILER_SUPPORTS_PDBTYPE)
+    string(APPEND CMAKE_${t}_LINKER_FLAGS_DEBUG_INIT " /debug /pdbtype:sept ${MSVC_INCREMENTAL_YES_FLAG}")
+    string(APPEND CMAKE_${t}_LINKER_FLAGS_RELWITHDEBINFO_INIT " /debug /pdbtype:sept ${MSVC_INCREMENTAL_YES_FLAG}")
+  else ()
+    string(APPEND CMAKE_${t}_LINKER_FLAGS_DEBUG_INIT " /debug ${MSVC_INCREMENTAL_YES_FLAG}")
+    string(APPEND CMAKE_${t}_LINKER_FLAGS_RELWITHDEBINFO_INIT " /debug ${MSVC_INCREMENTAL_YES_FLAG}")
+  endif ()
+  # for release and minsize release default to no incremental linking
+  string(APPEND CMAKE_${t}_LINKER_FLAGS_MINSIZEREL_INIT " /INCREMENTAL:NO")
+  string(APPEND CMAKE_${t}_LINKER_FLAGS_RELEASE_INIT " /INCREMENTAL:NO")
+endforeach()
