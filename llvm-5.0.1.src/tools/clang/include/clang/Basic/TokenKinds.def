@@ -798,6 +798,10 @@ ANNOTATION(module_include)
 ANNOTATION(module_begin)
 ANNOTATION(module_end)
 
+// Annotations for MQL specific preprocessor directvies
+ANNOTATION(property_directive)
+ANNOTATION(import_directive)
+
 #undef ANNOTATION
 #undef TESTING_KEYWORD
 #undef OBJC2_AT_KEYWORD

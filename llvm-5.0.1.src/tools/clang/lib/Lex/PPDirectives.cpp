@@ -31,6 +31,7 @@
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/PropertyDirectiveInfo.h"
 #include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1041,25 +1042,56 @@ void Preprocessor::HandleDirective(Token &Result) {
     return;
   }
 
+  // https://docs.mql4.com/basis/preprosessor/compilation
+  // Every MQL4-program allows to specify additional specific parameters 
+  // named #property that help client terminal in proper servicing 
+  // for programs without the necessity to launch them explicitly. 
+  // This concerns external settings of indicators, first of all. 
+  // Properties described in included files are completely ignored. 
+  // Properties must be specified in the main mq4 file.
+  //
+  // #property identifier value
+  //
+  // The compiler will write declared values in the configuration of the module executed.
   if (getLangOpts().MQL && Result.is(tok::identifier) &&
       Result.getIdentifierInfo()->getName().equals("property")) {
 
-    // https://docs.mql4.com/basis/preprosessor/compilation
-    // Every MQL4-program allows to specify additional specific parameters 
-    // named #property that help client terminal in proper servicing 
-    // for programs without the necessity to launch them explicitly. 
-    // This concerns external settings of indicators, first of all. 
-    // Properties described in included files are completely ignored. 
-    // Properties must be specified in the main mq4 file.
-    //
-    // #property identifier value
-    //
-    // The compiler will write declared values in the configuration of the module executed.
+    // Lex the property tokens.
+    SmallVector<Token, 2> PropertyNameAndArgumentTokens;
 
-    // TODO: Create token representing #property and its parameters.
-    // void Preprocessor::EnterAnnotationToken(SourceRange Range,
-    //                                     tok::TokenKind Kind,
-    //                                     void *AnnotationVal)
+	  if (Result.isNot(tok::eod)) {
+      Token PropertyName;
+      LexNonComment(PropertyName);
+      if (PropertyName.is(tok::identifier)) {
+        PropertyNameAndArgumentTokens.push_back(PropertyName);
+      } else if (PropertyName.is(tok::eod)) {
+        Diag(PropertyName.getLocation(), diag::err_pp_property_expected_property_name);
+        return;
+      } else {
+        Diag(PropertyName.getLocation(), diag::err_pp_property_property_name_not_identifier);
+        return;
+      }
+	  }
+
+    while (1) {
+      Token Argument;
+      LexNonComment(Argument);
+      if (Argument.is(tok::eod))
+        break;
+      PropertyNameAndArgumentTokens.push_back(Argument);
+    }
+    
+    auto *Info = new (getPreprocessorAllocator()) PropertyDirectiveInfo();
+
+    Info->PropertyNameAndArgumentTokens =
+        llvm::makeArrayRef(PropertyNameAndArgumentTokens).copy(getPreprocessorAllocator());
+
+    EnterAnnotationToken(/*Range=*/SourceRange(
+                            /*begin=*/SavedHash.getLocation(), 
+                            /*end=*/PropertyNameAndArgumentTokens.back().getLocation()),
+                         /*Kind=*/tok::annot_property_directive,
+                         /*AnnotationVal=*/static_cast<void *>(Info));
+    return;
   }
 
   // If we reached here, the preprocessing token is not valid!
