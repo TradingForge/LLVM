@@ -1437,6 +1437,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                 .Case("objective-c", InputKind::ObjC)
                 .Case("objective-c++", InputKind::ObjCXX)
                 .Case("renderscript", InputKind::RenderScript)
+                .Case("mql", InputKind::MQL)
                 .Default(InputKind::Unknown);
 
     // "objc[++]-cpp-output" is an acceptable synonym for
@@ -1663,6 +1664,8 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.AsmPreprocessor = 1;
   } else if (IK.isObjectiveC()) {
     Opts.ObjC1 = Opts.ObjC2 = 1;
+  } else if (IK.getLanguage() == InputKind::MQL) {
+    Opts.MQL = 1;
   }
 
   if (LangStd == LangStandard::lang_unspecified) {
@@ -1698,6 +1701,9 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
       break;
     case InputKind::RenderScript:
       LangStd = LangStandard::lang_c99;
+      break;
+    case InputKind::MQL:
+      LangStd = LangStandard::lang_gnucxx98;
       break;
     }
   }
@@ -1806,6 +1812,7 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
 
   case InputKind::CXX:
   case InputKind::ObjCXX:
+  case InputKind::MQL:
     return S.getLanguage() == InputKind::CXX;
 
   case InputKind::CUDA:
@@ -1840,6 +1847,8 @@ static const StringRef GetInputKindName(InputKind IK) {
     return "CUDA";
   case InputKind::RenderScript:
     return "RenderScript";
+  case InputKind::MQL:
+    return "MQL";
 
   case InputKind::Asm:
     return "Asm";

@@ -30,5 +30,6 @@ InputKind FrontendOptions::getInputKindForExtension(StringRef Extension) {
     .Case("cl", InputKind::OpenCL)
     .Case("cu", InputKind::CUDA)
     .Cases("ll", "bc", InputKind::LLVM_IR)
+    .Cases("mq4", "mq5", InputKind::MQL)
     .Default(InputKind::Unknown);
 }

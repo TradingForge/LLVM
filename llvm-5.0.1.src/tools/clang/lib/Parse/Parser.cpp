@@ -609,7 +609,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
 
   ParsedAttributesWithRange attrs(AttrFactory);
 
-  if (/*getLangOpts().MQL &&*/ Tok.is(tok::identifier) &&
+  if (getLangOpts().MQL && Tok.is(tok::identifier) &&
       Tok.getIdentifierInfo()->getName().equals("input")) {
 
     // https://docs.mql4.com/basis/variables/inputvariables

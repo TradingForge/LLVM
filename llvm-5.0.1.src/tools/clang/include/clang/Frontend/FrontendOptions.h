@@ -91,6 +91,7 @@ public:
     OpenCL,
     CUDA,
     RenderScript,
+    MQL
     ///@}
   };
 

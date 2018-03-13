@@ -1041,6 +1041,27 @@ void Preprocessor::HandleDirective(Token &Result) {
     return;
   }
 
+  if (getLangOpts().MQL && Result.is(tok::identifier) &&
+      Result.getIdentifierInfo()->getName().equals("property")) {
+
+    // https://docs.mql4.com/basis/preprosessor/compilation
+    // Every MQL4-program allows to specify additional specific parameters 
+    // named #property that help client terminal in proper servicing 
+    // for programs without the necessity to launch them explicitly. 
+    // This concerns external settings of indicators, first of all. 
+    // Properties described in included files are completely ignored. 
+    // Properties must be specified in the main mq4 file.
+    //
+    // #property identifier value
+    //
+    // The compiler will write declared values in the configuration of the module executed.
+
+    // TODO: Create token representing #property and its parameters.
+    // void Preprocessor::EnterAnnotationToken(SourceRange Range,
+    //                                     tok::TokenKind Kind,
+    //                                     void *AnnotationVal)
+  }
+
   // If we reached here, the preprocessing token is not valid!
   Diag(Result, diag::err_pp_invalid_directive);
 

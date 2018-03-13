@@ -55,6 +55,7 @@ TYPE("objective-c++-cpp-output", PP_ObjCXX,    INVALID,         "mii",   "u")
 TYPE("objc++-cpp-output",        PP_ObjCXX_Alias, INVALID,      "mii",   "u")
 TYPE("objective-c++",            ObjCXX,       PP_ObjCXX,       "mm",    "u")
 TYPE("renderscript",             RenderScript, PP_C,            "rs",    "u")
+TYPE("mql",                      MQL,          INVALID,         "mql",   "u")
 
 // C family input files to precompile.
 TYPE("c-header-cpp-output",      PP_CHeader,   INVALID,         "i",     "p")
@@ -68,6 +69,7 @@ TYPE("objective-c++-header-cpp-output", PP_ObjCXXHeader, INVALID, "mii", "p")
 TYPE("objective-c++-header",     ObjCXXHeader, PP_ObjCXXHeader, "h",     "pu")
 TYPE("c++-module",               CXXModule,    PP_CXXModule,    "cppm",  "mu")
 TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",   "m")
+TYPE("mqh",                      MQLHeader,    INVALID,         "mqh",   "pu")
 
 // Other languages.
 TYPE("ada",                      Ada,          INVALID,         nullptr, "u")
