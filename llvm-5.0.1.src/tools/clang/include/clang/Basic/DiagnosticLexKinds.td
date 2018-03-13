@@ -425,6 +425,13 @@ def err_pp_expr_bad_token_start_expr : Error<
 def err_pp_invalid_poison : Error<"can only poison identifier tokens">;
 def err_pp_used_poisoned_id : Error<"attempt to use a poisoned identifier">;
 
+let CategoryName = "MQL Preprocessor Directive Issue" in {
+
+def err_pp_property_directive_not_identifier : Error<"#property name must be an identifier">;
+def err_pp_missing_property_directive_name : Error<"#property name missing">;
+
+}
+
 def err_feature_check_malformed : Error<
   "builtin feature check macro requires a parenthesized identifier">;
 

@@ -1059,19 +1059,19 @@ void Preprocessor::HandleDirective(Token &Result) {
     // Lex the property tokens.
     SmallVector<Token, 2> PropertyNameAndArgumentTokens;
 
-	  if (Result.isNot(tok::eod)) {
+    if (Result.isNot(tok::eod)) {
       Token PropertyName;
       LexNonComment(PropertyName);
       if (PropertyName.is(tok::identifier)) {
         PropertyNameAndArgumentTokens.push_back(PropertyName);
       } else if (PropertyName.is(tok::eod)) {
-        Diag(PropertyName.getLocation(), diag::err_pp_property_expected_property_name);
+        Diag(PropertyName.getLocation(), diag::err_pp_missing_property_directive_name);
         return;
       } else {
-        Diag(PropertyName.getLocation(), diag::err_pp_property_property_name_not_identifier);
+        Diag(PropertyName.getLocation(), diag::err_pp_property_directive_not_identifier);
         return;
       }
-	  }
+    }
 
     while (1) {
       Token Argument;

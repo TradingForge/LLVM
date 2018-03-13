@@ -592,7 +592,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     return false;
 
   case tok::annot_property_directive:
-    ConsumeToken();
+    ConsumeAnnotationToken();
     return false;
 
   case tok::eof:
