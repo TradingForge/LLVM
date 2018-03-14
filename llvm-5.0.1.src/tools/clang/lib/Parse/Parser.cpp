@@ -15,6 +15,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Lex/PropertyDirectiveInfo.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -591,10 +592,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     HandlePragmaAttribute();
     return false;
 
-  case tok::annot_property_directive:
-    ConsumeAnnotationToken();
-    return false;
-
   case tok::eof:
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)
@@ -641,7 +638,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     auto AttrName = PP.getIdentifierInfo("annotate");
     ArgsVector ArgExprs;
 
-    StringRef Literal = R"({"kind": "mql-input"})";
+    StringRef Annotation = R"({"kind": "mql-input"})";
 
     QualType CharTyConst = Actions.Context.CharTy;
     // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
@@ -649,7 +646,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
       CharTyConst.addConst();
 
     auto CharByteWidth = PP.getTargetInfo().getCharWidth() / 8;
-    auto NumStringChars = Literal.size() / CharByteWidth;
+    auto NumStringChars = Annotation.size() / CharByteWidth;
 
     // Get an array type for the string, according to C99 6.4.5.  This includes
     // the nul terminator character as well as the string length for pascal
@@ -661,12 +658,13 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     SmallVector<SourceLocation, 1> StringTokLocs = { SourceLocation() };
 
     // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
-    StringLiteral *Lit = StringLiteral::Create(Actions.Context, Literal,
+    StringLiteral *Lit = StringLiteral::Create(Actions.Context, Annotation,
                                               StringLiteral::Ascii, /*Pascal=*/false, StrTy,
                                               &StringTokLocs[0],
                                               StringTokLocs.size());
-    ExprResult ArgExpr(Lit);
-    ArgExprs.push_back(ArgExpr.get());
+    // ExprResult ArgExpr(Lit);
+    // ArgExprs.push_back(ArgExpr.get());
+    ArgExprs.push_back(Lit);
 
     attrs.addNew(AttrName, SourceRange(Tok.getLocation(), Tok.getLastLoc()), 
                  /*ScopeName=*/nullptr, /*ScopeLoc=*/SourceLocation(),
@@ -764,6 +762,64 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_pragma_dump:
     HandlePragmaDump();
     return nullptr;
+  case tok::annot_property_directive: {
+    auto Info = reinterpret_cast<PropertyDirectiveInfo *>(Tok.getAnnotationValue());
+
+    std::string Annotation = R"({"kind": "mql-property", "args": [)";
+    for (auto PropTok = Info->PropertyNameAndArgumentTokens.begin();
+         Info->PropertyNameAndArgumentTokens.end() != PropTok;
+         ++PropTok) {
+      if (Info->PropertyNameAndArgumentTokens.begin() == PropTok) {
+        assert(PropTok->is(tok::identifier) && "#property's name must be an indentifier");
+        Annotation += PropTok->getIdentifierInfo()->getName();
+      } else if (PropTok->isLiteral()) {
+        assert(PropTok->isLiteral() && "#property's args must be literals");
+        Annotation += R"(, )";
+        Annotation += StringRef(PropTok->getLiteralData(), PropTok->getLength());
+      }
+    }
+    Annotation += R"(]})";
+
+    QualType CharTyConst = Actions.Context.CharTy;
+    // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
+    if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
+      CharTyConst.addConst();
+
+    auto CharByteWidth = PP.getTargetInfo().getCharWidth() / 8;
+    auto NumStringChars = Annotation.size() / CharByteWidth;
+
+    // Get an array type for the string, according to C99 6.4.5.  This includes
+    // the nul terminator character as well as the string length for pascal
+    // strings.
+    QualType StrTy = Actions.Context.getConstantArrayType(CharTyConst,
+                                   llvm::APInt(32, NumStringChars+1),
+                                   ArrayType::Normal, 0);
+
+    SmallVector<SourceLocation, 1> StringTokLocs = { SourceLocation() };
+
+    // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
+    auto * Lit = StringLiteral::Create(Actions.Context, Annotation,
+                                       StringLiteral::Ascii, /*Pascal=*/false, StrTy,
+                                       &StringTokLocs[0], StringTokLocs.size());
+    ArgsVector ArgExprs = { Lit };
+
+    auto AttrName = PP.getIdentifierInfo("annotate");
+    attrs.addNew(AttrName, SourceRange(Tok.getLocation(), Tok.getAnnotationEndLoc()), 
+                 /*ScopeName=*/nullptr, /*ScopeLoc=*/SourceLocation(),
+                 /*args=*/ArgExprs.data(), /*numArgs=*/ArgExprs.size(), AttributeList::AS_GNU);
+
+    // Either a C++11 empty-declaration or attribute-declaration.
+    //SingleDecl = Actions.ActOnEmptyDeclaration(getCurScope(),
+    //                                           attrs.getList(),
+    //                                           Tok.getLocation());
+    auto & ASTContext = Actions.Context;
+    ASTContext.getTranslationUnitDecl()->addAttr(
+      ::new (ASTContext) AnnotateAttr(attrs.getList()->getRange(), 
+                                      ASTContext, Annotation,
+                                      attrs.getList()->getAttributeSpellingListIndex()));
+    ConsumeAnnotationToken();
+    break;
+  }
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl = Actions.ActOnEmptyDeclaration(getCurScope(),
