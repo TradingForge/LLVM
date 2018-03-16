@@ -186,6 +186,23 @@ class Preprocessor {
   /// \brief True if we are pre-expanding macro arguments.
   bool InMacroArgPreExpansion;
 
+  /// \brief True if we are currently preprocessing an MQL #import directive.
+  ///
+  /// For the very first MQL #import "file_name.ext" we generate 
+  /// the tokens corresponding to #pragma clang attribute push(...)
+  /// Next we can encounter either:
+  ///   1) another #import "another_file_name.ext".
+  ///      In this case we generate 
+  ///      #pragma clang attribute pop corresponding to the push of "file_name.exe" and 
+  ///      #pragma clang attribute push(...) for "another_file_name.ext"
+  ///   2) #import without arguments which indicates the end of the import block.
+  ///      In this case we generate only #pragma clang attribute pop
+  /// This flag lets us keep track of whether we should generate 
+  ///   1) a single push
+  ///   2) a push/pop pair
+  ///   3) a single pop
+  bool InMQLImport;
+
   /// \brief Mapping/lookup information for all identifiers in
   /// the program, including program keywords.
   mutable IdentifierTable Identifiers;

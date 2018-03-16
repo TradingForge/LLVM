@@ -117,6 +117,9 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
   ParsingIfOrElifDirective = false;
   PreprocessedOutput = false;
 
+  // MQL
+  InMQLImport = false;
+
   CachedLexPos = 0;
 
   // We haven't read anything from the external source.

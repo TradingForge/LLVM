@@ -2142,11 +2142,134 @@ void Preprocessor::HandleMicrosoftImportDirective(Token &Tok) {
   DiscardUntilEndOfDirective();
 }
 
-static Token & startToken(Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
-  Tok.startToken();
-  Tok.setKind(tok::kw_namespace);
-  Tok.setLocation(Tok.getLocation());
-  return Tok;
+namespace {
+namespace mql_import_directive_handler {
+  class TokenFactory {
+    Preprocessor & PP;
+    SourceLocation Loc;
+
+  public:
+    static const auto NumBeginNSToks = 3;
+    static const auto NumEndNSUsingNSToks = 4;   
+    static const auto NumPragmaAttrPushToks = 15;
+    static const auto NumPragmaAttrPopToks = 5;
+
+    TokenFactory(Preprocessor & PP, 
+                 SourceLocation Loc)
+      : PP(PP)
+      , Loc(Loc) {
+    }
+
+    std::unique_ptr<Token[]> createBeginNSToks(StringRef namespaceName) {
+      auto BeginNSToks = llvm::make_unique<Token[]>(NumBeginNSToks);
+
+      formToken(BeginNSToks[0], tok::kw_namespace, Loc);
+      formToken(BeginNSToks[1], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo(namespaceName));
+      formToken(BeginNSToks[2], tok::l_brace, Loc);
+
+      return BeginNSToks;
+    }
+
+    std::unique_ptr<Token[]> createEndNSUsingNSToks(StringRef namespaceName) {
+      auto EndNSUsingNSToks = llvm::make_unique<Token[]>(NumEndNSUsingNSToks);
+
+      formToken(EndNSUsingNSToks[0], tok::r_brace, Loc);
+      formToken(EndNSUsingNSToks[1], tok::kw_using, Loc);
+      formToken(EndNSUsingNSToks[2], tok::kw_namespace, Loc);
+      formToken(EndNSUsingNSToks[3], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo(namespaceName));
+
+      return EndNSUsingNSToks;
+    }
+
+    std::unique_ptr<Token[]> createPragmaAttrPushToks(StringRef fileName) {
+      // #pragma clang attribute push(__attribute__((annotate("{\"kind\": \"mql-import\", \"args\": [\"user32.dll\"]}"))),\
+      //                            apply_to = function)
+      auto PragmaAttrPushToks = llvm::make_unique<Token[]>(NumPragmaAttrPushToks);
+
+      formToken(PragmaAttrPushToks[0], tok::hash, Loc);
+      formToken(PragmaAttrPushToks[1], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("pragma"));
+      formToken(PragmaAttrPushToks[2], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("clang"));
+      formToken(PragmaAttrPushToks[3], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("attribute"));
+      formToken(PragmaAttrPushToks[4], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("push"));
+      formToken(PragmaAttrPushToks[5], tok::l_paren, Loc);
+
+      //		kw___attribute	
+      //		l_paren	
+      //		l_paren	
+      //		{Identifier (annotate)}	
+      //		l_paren	
+      formToken(PragmaAttrPushToks[6], tok::kw___attribute, Loc);
+      formToken(PragmaAttrPushToks[7], tok::l_paren, Loc);
+      formToken(PragmaAttrPushToks[8], tok::l_paren, Loc);
+      formToken(PragmaAttrPushToks[9], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("annotate"));
+      formToken(PragmaAttrPushToks[8], tok::l_paren, Loc);
+
+      //		string_literal	
+      //    TODO: ...
+      std::string Annotation = R"({"kind": "mql-import", "args": [")";
+      Annotation += fileName;
+      Annotation += R"("]})";
+      PP.CreateString(Annotation,
+                      formToken(PragmaAttrPushToks[8], tok::string_literal, Loc));
+
+      //		r_paren	
+      //		r_paren	
+      //		r_paren	
+      formToken(PragmaAttrPushToks[9], tok::r_paren, Loc);
+      formToken(PragmaAttrPushToks[10], tok::r_paren, Loc);
+      formToken(PragmaAttrPushToks[11], tok::r_paren, Loc);
+
+      //		comma	
+      formToken(PragmaAttrPushToks[12], tok::comma, Loc);
+
+      //		{Identifier (apply_to)}	
+      //		equal	
+      //		{Identifier (function)}	
+      formToken(PragmaAttrPushToks[13], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("apply_to"));
+      formToken(PragmaAttrPushToks[14], tok::equal, Loc);
+      formToken(PragmaAttrPushToks[15], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("function"));
+
+      formToken(PragmaAttrPushToks[16], tok::r_paren, Loc);
+      formToken(PragmaAttrPushToks[17], tok::eod, Loc);
+
+      return PragmaAttrPushToks;
+    }
+
+    std::unique_ptr<Token[]> createPragmaAttrPopToks() {
+      // #pragma clang attribute pop
+      auto PragmaAttrPopToks = llvm::make_unique<Token[]>(NumPragmaAttrPopToks);
+
+      formToken(PragmaAttrPopToks[0], tok::hash, Loc);
+      formToken(PragmaAttrPopToks[1], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("pragma"));
+      formToken(PragmaAttrPopToks[2], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("clang"));
+      formToken(PragmaAttrPopToks[3], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("attribute"));
+      formToken(PragmaAttrPopToks[4], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("pop"));
+
+      return PragmaAttrPopToks;
+    }
+
+  private:
+    static Token & formToken(Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
+      Tok.startToken();
+      Tok.setKind(tok::kw_namespace);
+      Tok.setLocation(Tok.getLocation());
+      return Tok;
+    }
+  };
+}
 }
 
 /// HandleMQLImportDirective - Implements \#import for MQL Mode
@@ -2161,14 +2284,14 @@ void Preprocessor::HandleMQLImportDirective(Token &Tok) {
   // New command #import (can be without parameters) completes 
   // the block of imported function descriptions.   
   //
-  // [TODO] Imported functions can have any names. 
-  // [TODO] Functions having the same names but from different modules can 
-  // [TODO] be imported at the same time. 
-  // [TODO] Imported functions can have names that coincide with the names of 
-  // [TODO] built-in functions. 
-  // [TODO] Operation of scope resolution defines which of the functions should be called.
-  // [TODO] The order of searching for a file specified after 
-  // [TODO] the #import keyword is described in Call of Imported Functions.
+  // Imported functions can have any names. 
+  // Functions having the same names but from different modules can 
+  // be imported at the same time. 
+  // Imported functions can have names that coincide with the names of 
+  // built-in functions. 
+  // Operation of scope resolution defines which of the functions should be called.
+  // The order of searching for a file specified after 
+  // the #import keyword is described in Call of Imported Functions.
   //
   // Examples:
   // #import "kernel32.dll" 
@@ -2185,34 +2308,28 @@ void Preprocessor::HandleMQLImportDirective(Token &Tok) {
   //
   // ::Print("kernel32 GetLastError", kernel32::GetLastError()); 
 
-  const auto NumBeginNSToks = 3;   
-  auto BeginNSToks = llvm::make_unique<Token[]>(NumBeginNSToks);
-  BeginNSToks[0].startToken();
-  BeginNSToks[0].setKind(tok::kw_namespace);
-  BeginNSToks[0].setLocation(Tok.getLocation());
+  using TokenFactory = mql_import_directive_handler::TokenFactory;
+  TokenFactory tokenFactory(*this, Tok.getLocation());
 
-  BeginNSToks[1].startToken();
-  BeginNSToks[1].setKind(tok::identifier);
-  BeginNSToks[1].setLocation(Tok.getLocation());
-  BeginNSToks[1].setIdentifierInfo(getIdentifierInfo("kernel32"));
-
-  BeginNSToks[2].startToken();
-  BeginNSToks[2].setKind(tok::l_brace);
-  BeginNSToks[2].setLocation(Tok.getLocation());
-
+  auto BeginNSToks = tokenFactory.createBeginNSToks("kernel32");
   // Enter this token stream so that we re-lex the tokens.
-  EnterTokenStream(std::move(BeginNSToks), NumBeginNSToks, /*DisableMacroExpansion=*/true);
+  //EnterTokenStream(std::move(BeginNSToks), 
+  //                 TokenFactory::NumBeginNSToks, /*DisableMacroExpansion=*/true);
 
-  const auto NumEndNSUsingNSToks = 4;   
-  auto EndNSUsingNSToks = llvm::make_unique<Token[]>(NumEndNSUsingNSToks);
-  startToken(EndNSUsingNSToks[0], tok::r_brace, Tok.getLocation());
-  startToken(EndNSUsingNSToks[1], tok::kw_using, Tok.getLocation());
-  startToken(EndNSUsingNSToks[2], tok::kw_namespace, Tok.getLocation());
-  startToken(EndNSUsingNSToks[3], tok::identifier, Tok.getLocation())
-    .setIdentifierInfo(getIdentifierInfo("kernel32"));
-
+  auto PragmaAttrPushToks = tokenFactory.createPragmaAttrPushToks("kernel32.dll");
   // Enter this token stream so that we re-lex the tokens.
-  EnterTokenStream(std::move(BeginNSToks), NumBeginNSToks, /*DisableMacroExpansion=*/true);
+  //EnterTokenStream(std::move(PragmaAttrPushToks), 
+  //                 TokenFactory::NumPragmaAttrPushToks, /*DisableMacroExpansion=*/true);
+
+  auto PragmaAttrPopToks = tokenFactory.createPragmaAttrPopToks();
+  // Enter this token stream so that we re-lex the tokens.
+  //EnterTokenStream(std::move(PragmaAttrPopToks), 
+  //                 TokenFactory::NumPragmaAttrPopToks, /*DisableMacroExpansion=*/true);
+
+  auto EndNSUsingNSToks = tokenFactory.createEndNSUsingNSToks("kernel32");
+  // Enter this token stream so that we re-lex the tokens.
+  //EnterTokenStream(std::move(EndNSUsingNSToks), 
+  //                 TokenFactory::NumEndNSUsingNSToks, /*DisableMacroExpansion=*/true);
 }
 
 /// HandleImportDirective - Implements \#import.

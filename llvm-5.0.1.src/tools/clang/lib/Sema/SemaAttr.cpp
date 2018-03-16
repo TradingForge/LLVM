@@ -608,6 +608,11 @@ void Sema::PrintPragmaAttributeInstantiationPoint() {
 void Sema::DiagnoseUnterminatedPragmaAttribute() {
   if (PragmaAttributeStack.empty())
     return;
+  // TODO: If the unterminated pragma clang attribute push was generated
+  // TODO: as a result of parsing an MQL #import,
+  // TODO: we should display a custom diagnostic
+  // TODO: that mentions the unterminated #import instead of the attribute.
+  // TODO: See StringRef::startswith(R"({"kind": "mql-import")")
   Diag(PragmaAttributeStack.back().Loc, diag::err_pragma_attribute_no_pop_eof);
 }
 
