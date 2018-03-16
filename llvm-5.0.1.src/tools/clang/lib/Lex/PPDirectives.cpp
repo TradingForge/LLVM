@@ -1059,18 +1059,16 @@ void Preprocessor::HandleDirective(Token &Result) {
     // Lex the property tokens.
     SmallVector<Token, 2> PropertyNameAndArgumentTokens;
 
-    if (Result.isNot(tok::eod)) {
-      Token PropertyName;
-      LexNonComment(PropertyName);
-      if (PropertyName.is(tok::identifier)) {
-        PropertyNameAndArgumentTokens.push_back(PropertyName);
-      } else if (PropertyName.is(tok::eod)) {
-        Diag(PropertyName.getLocation(), diag::err_pp_missing_property_directive_name);
-        return;
-      } else {
-        Diag(PropertyName.getLocation(), diag::err_pp_property_directive_not_identifier);
-        return;
-      }
+    Token PropertyName;
+    LexNonComment(PropertyName);
+    if (PropertyName.is(tok::identifier)) {
+      PropertyNameAndArgumentTokens.push_back(PropertyName);
+    } else if (PropertyName.is(tok::eod)) {
+      Diag(PropertyName.getLocation(), diag::err_pp_missing_property_directive_name);
+      return;
+    } else {
+      Diag(PropertyName.getLocation(), diag::err_pp_property_directive_not_identifier);
+      return;
     }
 
     while (1) {
@@ -1082,7 +1080,6 @@ void Preprocessor::HandleDirective(Token &Result) {
     }
     
     auto *Info = new (getPreprocessorAllocator()) PropertyDirectiveInfo();
-
     Info->PropertyNameAndArgumentTokens =
         llvm::makeArrayRef(PropertyNameAndArgumentTokens).copy(getPreprocessorAllocator());
 
@@ -2145,6 +2142,79 @@ void Preprocessor::HandleMicrosoftImportDirective(Token &Tok) {
   DiscardUntilEndOfDirective();
 }
 
+static Token & startToken(Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
+  Tok.startToken();
+  Tok.setKind(tok::kw_namespace);
+  Tok.setLocation(Tok.getLocation());
+  return Tok;
+}
+
+/// HandleMQLImportDirective - Implements \#import for MQL Mode
+void Preprocessor::HandleMQLImportDirective(Token &Tok) {
+  // Functions are imported from compiled MQL5 modules (*.ex5 files) and 
+  // from operating system modules (*.dll files). 
+  // The module name is specified in the #import directive. 
+  // For compiler to be able to correctly form the imported function call and 
+  // organize proper transmission parameters, 
+  // the full description of functions is needed. 
+  // Function descriptions immediately follow the #import "module name" directive. 
+  // New command #import (can be without parameters) completes 
+  // the block of imported function descriptions.   
+  //
+  // [TODO] Imported functions can have any names. 
+  // [TODO] Functions having the same names but from different modules can 
+  // [TODO] be imported at the same time. 
+  // [TODO] Imported functions can have names that coincide with the names of 
+  // [TODO] built-in functions. 
+  // [TODO] Operation of scope resolution defines which of the functions should be called.
+  // [TODO] The order of searching for a file specified after 
+  // [TODO] the #import keyword is described in Call of Imported Functions.
+  //
+  // Examples:
+  // #import "kernel32.dll" 
+  //   int GetLastError(void); 
+  // #import "user32.dll" 
+  //   int    MessageBoxW(uint hWnd,string lpText,string lpCaption,uint uType); 
+  // #import "stdlib.ex5" 
+  //   int    RGB(int red_value,int green_value,int blue_value); 
+  //   bool   CompareDoubles(double number1,double number2); 
+  // #import "ExpertSample.dll" 
+  //   double GetDoubleValue(double); 
+  //   string GetStringValue(string); 
+  // #import 
+  //
+  // ::Print("kernel32 GetLastError", kernel32::GetLastError()); 
+
+  const auto NumBeginNSToks = 3;   
+  auto BeginNSToks = llvm::make_unique<Token[]>(NumBeginNSToks);
+  BeginNSToks[0].startToken();
+  BeginNSToks[0].setKind(tok::kw_namespace);
+  BeginNSToks[0].setLocation(Tok.getLocation());
+
+  BeginNSToks[1].startToken();
+  BeginNSToks[1].setKind(tok::identifier);
+  BeginNSToks[1].setLocation(Tok.getLocation());
+  BeginNSToks[1].setIdentifierInfo(getIdentifierInfo("kernel32"));
+
+  BeginNSToks[2].startToken();
+  BeginNSToks[2].setKind(tok::l_brace);
+  BeginNSToks[2].setLocation(Tok.getLocation());
+
+  // Enter this token stream so that we re-lex the tokens.
+  EnterTokenStream(std::move(BeginNSToks), NumBeginNSToks, /*DisableMacroExpansion=*/true);
+
+  const auto NumEndNSUsingNSToks = 4;   
+  auto EndNSUsingNSToks = llvm::make_unique<Token[]>(NumEndNSUsingNSToks);
+  startToken(EndNSUsingNSToks[0], tok::r_brace, Tok.getLocation());
+  startToken(EndNSUsingNSToks[1], tok::kw_using, Tok.getLocation());
+  startToken(EndNSUsingNSToks[2], tok::kw_namespace, Tok.getLocation());
+  startToken(EndNSUsingNSToks[3], tok::identifier, Tok.getLocation())
+    .setIdentifierInfo(getIdentifierInfo("kernel32"));
+
+  // Enter this token stream so that we re-lex the tokens.
+  EnterTokenStream(std::move(BeginNSToks), NumBeginNSToks, /*DisableMacroExpansion=*/true);
+}
+
 /// HandleImportDirective - Implements \#import.
 ///
 void Preprocessor::HandleImportDirective(SourceLocation HashLoc,
@@ -2152,6 +2222,10 @@ void Preprocessor::HandleImportDirective(SourceLocation HashLoc,
   if (!LangOpts.ObjC1) {  // #import is standard for ObjC.
     if (LangOpts.MSVCCompat)
       return HandleMicrosoftImportDirective(ImportTok);
+    if (LangOpts.MQL) {
+      HandleMQLImportDirective(ImportTok);
+      return;
+    }
     Diag(ImportTok, diag::ext_pp_import_directive);
   }
   return HandleIncludeDirective(HashLoc, ImportTok, nullptr, nullptr, true);

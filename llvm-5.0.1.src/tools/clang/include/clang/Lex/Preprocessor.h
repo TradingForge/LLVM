@@ -1969,6 +1969,7 @@ private:
   void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
   void HandleImportDirective(SourceLocation HashLoc, Token &Tok);
   void HandleMicrosoftImportDirective(Token &Tok);
+  void HandleMQLImportDirective(Token &Tok);
 
 public:
   /// Check that the given module is available, producing a diagnostic if not.
