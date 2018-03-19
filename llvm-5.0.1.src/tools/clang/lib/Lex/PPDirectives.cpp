@@ -2154,6 +2154,8 @@ namespace mql_import_directive_handler {
     static const auto NumPragmaAttrPushToks = 15;
     static const auto NumPragmaAttrPopToks = 5;
 
+    static const auto NumPragmaAttrPopEndNSUsingNSToks = NumPragmaAttrPopToks + NumEndNSUsingNSToks;
+
     TokenFactory(Preprocessor & PP, 
                  SourceLocation Loc)
       : PP(PP)
@@ -2261,11 +2263,36 @@ namespace mql_import_directive_handler {
       return PragmaAttrPopToks;
     }
 
+    std::unique_ptr<Token[]> createPragmaAttrPopEndNSUsingNSToks(StringRef namespaceName) {
+      // #pragma clang attribute pop
+      auto Toks = llvm::make_unique<Token[]>(NumPragmaAttrPopEndNSUsingNSToks);
+
+      formToken(Toks[0], tok::hash, Loc);
+      formToken(Toks[1], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("pragma"));
+      formToken(Toks[2], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("clang"));
+      formToken(Toks[3], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("attribute"));
+      formToken(Toks[4], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo("pop"));
+
+      // }
+      // using namespace {namespaceName}
+      formToken(Toks[5], tok::r_brace, Loc);
+      formToken(Toks[6], tok::kw_using, Loc);
+      formToken(Toks[7], tok::kw_namespace, Loc);
+      formToken(Toks[8], tok::identifier, Loc)
+        .setIdentifierInfo(PP.getIdentifierInfo(namespaceName));
+
+      return Toks;
+    }
+
   private:
     static Token & formToken(Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
       Tok.startToken();
-      Tok.setKind(tok::kw_namespace);
-      Tok.setLocation(Tok.getLocation());
+      Tok.setKind(Kind);
+      Tok.setLocation(Loc);
       return Tok;
     }
   };
@@ -2308,28 +2335,55 @@ void Preprocessor::HandleMQLImportDirective(Token &Tok) {
   //
   // ::Print("kernel32 GetLastError", kernel32::GetLastError()); 
 
+  // Lex the imported module name token.
+  Token ModuleNameTok;
+  LexNonComment(ModuleNameTok);
+
   using TokenFactory = mql_import_directive_handler::TokenFactory;
   TokenFactory tokenFactory(*this, Tok.getLocation());
 
-  auto BeginNSToks = tokenFactory.createBeginNSToks("kernel32");
-  // Enter this token stream so that we re-lex the tokens.
-  //EnterTokenStream(std::move(BeginNSToks), 
-  //                 TokenFactory::NumBeginNSToks, /*DisableMacroExpansion=*/true);
+  if (ModuleNameTok.is(tok::string_literal)) {
+    if (InMQLImport) {
+      auto PragmaAttrPopEndNSUsingNSToks = tokenFactory.createPragmaAttrPopEndNSUsingNSToks(CurrentMQLImportNamespace);
+      // Enter this token stream so that we re-lex the tokens.
+      EnterTokenStream(std::move(PragmaAttrPopEndNSUsingNSToks), 
+                       TokenFactory::NumPragmaAttrPopToks, /*DisableMacroExpansion=*/true);
+    } else {
+      InMQLImport = true;
+    }
 
-  auto PragmaAttrPushToks = tokenFactory.createPragmaAttrPushToks("kernel32.dll");
-  // Enter this token stream so that we re-lex the tokens.
-  //EnterTokenStream(std::move(PragmaAttrPushToks), 
-  //                 TokenFactory::NumPragmaAttrPushToks, /*DisableMacroExpansion=*/true);
+    // TODO: Strip away quotes...
+    StringRef ModuleName = ModuleNameTok.getLiteralData();
 
-  auto PragmaAttrPopToks = tokenFactory.createPragmaAttrPopToks();
-  // Enter this token stream so that we re-lex the tokens.
-  //EnterTokenStream(std::move(PragmaAttrPopToks), 
-  //                 TokenFactory::NumPragmaAttrPopToks, /*DisableMacroExpansion=*/true);
+    auto PragmaAttrPushToks = tokenFactory.createPragmaAttrPushToks(ModuleName);
+    // Enter this token stream so that we re-lex the tokens.
+    EnterTokenStream(std::move(PragmaAttrPushToks), 
+                     TokenFactory::NumPragmaAttrPushToks, /*DisableMacroExpansion=*/true);
 
-  auto EndNSUsingNSToks = tokenFactory.createEndNSUsingNSToks("kernel32");
-  // Enter this token stream so that we re-lex the tokens.
-  //EnterTokenStream(std::move(EndNSUsingNSToks), 
-  //                 TokenFactory::NumEndNSUsingNSToks, /*DisableMacroExpansion=*/true);
+    // TODO: Strip away the file's extension...
+    CurrentMQLImportNamespace = ModuleName;
+
+    auto BeginNSToks = tokenFactory.createBeginNSToks(CurrentMQLImportNamespace);
+    // Enter this token stream so that we re-lex the tokens.
+    EnterTokenStream(std::move(BeginNSToks), 
+                     TokenFactory::NumBeginNSToks, /*DisableMacroExpansion=*/true);
+
+  } else if (ModuleNameTok.is(tok::eod)) {
+    if (InMQLImport) {
+      InMQLImport = false;
+
+      auto PragmaAttrPopEndNSUsingNSToks = tokenFactory.createPragmaAttrPopEndNSUsingNSToks(CurrentMQLImportNamespace);
+      // Enter this token stream so that we re-lex the tokens.
+      EnterTokenStream(std::move(PragmaAttrPopEndNSUsingNSToks), 
+                       TokenFactory::NumPragmaAttrPopToks, /*DisableMacroExpansion=*/true);
+    }
+    // TODO: Diagnose mismatched end of #import...
+  } else {
+    //Diag(ModuleName.getLocation(), diag::err_pp_import_directive_not_string_literal);
+    return;
+  }
+
+  CheckEndOfDirective("import");
 }
 
 /// HandleImportDirective - Implements \#import.

@@ -202,6 +202,9 @@ class Preprocessor {
   ///   2) a push/pop pair
   ///   3) a single pop
   bool InMQLImport;
+  /// \brief The namespace name generated from the current #import's module name
+  ///
+  std::string CurrentMQLImportNamespace;
 
   /// \brief Mapping/lookup information for all identifiers in
   /// the program, including program keywords.
