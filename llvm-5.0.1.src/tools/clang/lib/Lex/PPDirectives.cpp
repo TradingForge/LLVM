@@ -2144,6 +2144,15 @@ void Preprocessor::HandleMicrosoftImportDirective(Token &Tok) {
 
 namespace {
   /// Expands an MQL import directive kind of like a macros gets expanded
+  /// The exapnsion looks similar to the example below
+  //
+  //  _Pragma("clang attribute push(__attribute__((annotate(\"{\\\"kind\\\": \\\"mql-import\\\", \\\"args\\\": [\\\"user32.dll\\\"]}\"))), apply_to = function)")
+  //  namespace user32 {
+  //    int SendMessageA(int hWnd, int Msg, int wParam, int lParam);
+  //    int SendMessageW(int hWnd, int Msg, int wParam, int lParam);
+  //  }
+  //  using namespace user32;
+  //  _Pragma("clang attribute pop")
   class MQLImportDirectiveExpander {
     Preprocessor & PP;
     SourceLocation Loc;
@@ -2164,9 +2173,36 @@ namespace {
       , Loc(Loc) {
     }
 
-    void enterImportStartToks(StringRef StartFileName, StringRef StartNamespaceName) {
-      auto NumToks = NumBeginNSToks + NumPragmaAttrPushToks;
-      auto Toks = llvm::make_unique<Token[]>(NumToks);
+    void enterImportStartToks(StringRef ImportFileName, 
+                              StringRef StartNamespaceName) {
+      // We enter two streams of tokens on a stack.
+      // Because the stream at the top gets processed first 
+      // we enter the streams in the reverse order.
+      enterBeginNSToks(StartNamespaceName);
+      enterAttrPushToks(ImportFileName);
+    }
+
+    void enterImportEndAndStartToks(StringRef EndNamespaceName, 
+                                    StringRef StartFileName, 
+                                    StringRef StartNamespaceName) {
+      // We enter two streams of tokens on a stack.
+      // Because the stream at the top gets processed first 
+      // we enter the streams in the reverse order.
+      enterImportStartToks(StartFileName, StartNamespaceName);
+      enterImportEndToks(EndNamespaceName);
+    }
+
+    void enterImportEndToks(StringRef EndNamespaceName) {
+      // We enter two streams of tokens on a stack.
+      // Because the stream at the top gets processed first 
+      // we enter the streams in the reverse order.
+      enterAttrPopToks();
+      enterEndNSUsingNSToks(EndNamespaceName);
+    }
+
+  private:
+    void enterBeginNSToks(StringRef StartNamespaceName) {
+      auto Toks = llvm::make_unique<Token[]>(NumBeginNSToks);
       unsigned char i = 0;
 
       // namespace {startNamespaceName} {
@@ -2175,6 +2211,17 @@ namespace {
       formToken(Toks[i++], tok::identifier, Loc)
         .setIdentifierInfo(PP.getIdentifierInfo(StartNamespaceName));
       formToken(Toks[i++], tok::l_brace, Loc);
+
+      assert(NumBeginNSToks == i 
+        && "token index is out of range [0: NumBeginNSToks)");
+
+      PP.EnterTokenStream(std::move(Toks), NumBeginNSToks, 
+                          /*DisableMacroExpansion=*/true);
+    }
+
+    void enterAttrPushToks(StringRef ImportFileName) {
+      auto Toks = llvm::make_unique<Token[]>(NumPragmaAttrPushToks);
+      unsigned char i = 0;
 
       // _Pragma("clang attribute push(__attribute__((annotate(\"...\"))), apply_to = function)")
       auto & Tok_Pragma = formToken(Toks[i++], tok::identifier, Loc);
@@ -2186,29 +2233,22 @@ namespace {
       std::string Pragma = "\"clang attribute push(__attribute__(("
                            "annotate(\\\"{\\\\\\\"kind\\\\\\\": \\\\\\\"mql-import\\\\\\\", "
                            "\\\\\\\"args\\\\\\\": [\\\\\\\"";
-      Pragma +=            StartFileName;
+      Pragma +=            ImportFileName;
       Pragma +=            "\\\\\\\"]}\\\"))), apply_to = function)\"";
       PP.CreateString(Pragma,
                       formToken(Toks[i++], tok::string_literal, Loc));
 
       formToken(Toks[i++], tok::r_paren, Loc);
 
-      assert(NumToks == i 
-        && "token index is out of range [0: NumToks)");
+      assert(NumPragmaAttrPushToks == i 
+        && "token index is out of range [0: NumPragmaAttrPushToks)");
 
-      PP.EnterTokenStream(std::move(Toks), NumToks, /*DisableMacroExpansion=*/false);
+      PP.EnterTokenStream(std::move(Toks), NumPragmaAttrPushToks, 
+                          /*DisableMacroExpansion=*/false);
     }
 
-    void enterImportEndAndStartToks(StringRef EndNamespaceName, StringRef StartFileName, StringRef StartNamespaceName) {
-      // We enter two streams of tokens on a stack.
-      // Because of the stack we enter the streams in the reverse order.
-      enterImportStartToks(StartFileName, StartNamespaceName);
-      enterImportEndToks(EndNamespaceName);
-    }
-
-    void enterImportEndToks(StringRef EndNamespaceName) {
-      auto NumToks = NumPragmaAttrPopToks + NumEndNSUsingNSToks;
-      auto Toks = llvm::make_unique<Token[]>(NumToks);
+    void enterAttrPopToks() {
+      auto Toks = llvm::make_unique<Token[]>(NumPragmaAttrPopToks);
       unsigned char i = 0;
 
       // _Pragma("clang attribute pop")
@@ -2224,22 +2264,33 @@ namespace {
 
       formToken(Toks[i++], tok::r_paren, Loc);
 
+      assert(NumPragmaAttrPopToks == i
+        && "token index is out of range [0: NumPragmaAttrPopToks)");
+
+      PP.EnterTokenStream(std::move(Toks), NumPragmaAttrPopToks, 
+                          /*DisableMacroExpansion=*/false);
+    }
+
+    void enterEndNSUsingNSToks(StringRef NamespaceName) {
+      auto Toks = llvm::make_unique<Token[]>(NumEndNSUsingNSToks);
+      unsigned char i = 0;
+
       // }
       // using namespace {endNamespaceName};
       formToken(Toks[i++], tok::r_brace, Loc).setFlag(Token::StartOfLine);
       formToken(Toks[i++], tok::kw_using, Loc).setFlag(Token::StartOfLine);
       formToken(Toks[i++], tok::kw_namespace, Loc);
       formToken(Toks[i++], tok::identifier, Loc)
-        .setIdentifierInfo(PP.getIdentifierInfo(EndNamespaceName));
+        .setIdentifierInfo(PP.getIdentifierInfo(NamespaceName));
       formToken(Toks[i++], tok::semi, Loc);
 
-      assert(NumToks == i 
-        && "token index is out of range [0: NumToks)");
+      assert(NumEndNSUsingNSToks == i 
+        && "token index is out of range [0: NumEndNSUsingNSToks)");
 
-      PP.EnterTokenStream(std::move(Toks), NumToks, /*DisableMacroExpansion=*/false);
+      PP.EnterTokenStream(std::move(Toks), NumEndNSUsingNSToks, 
+                          /*DisableMacroExpansion=*/true);
     }
 
-  private:
     static Token & formToken(Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
       Tok.startToken();
       Tok.setKind(Kind);
@@ -2307,20 +2358,19 @@ void Preprocessor::HandleMQLImportDirective(Token &ImportTok) {
     assert(!isAngled && "quoted string literal expected");
     CheckEndOfDirective("import");
 
-    std::string Namespace = llvm::sys::path::stem(
+    std::string ExitAndUseNamespace = CurrentMQLImportNamespace;
+    CurrentMQLImportNamespace = llvm::sys::path::stem(
                                     Filename, 
                                     llvm::sys::path::Style::windows);
     
     if (!InMQLImport) {
       InMQLImport = true;
-      expander.enterImportStartToks(Filename, Namespace);
+      expander.enterImportStartToks(Filename, CurrentMQLImportNamespace);
     } else {
-      expander.enterImportEndAndStartToks(CurrentMQLImportNamespace, 
+      expander.enterImportEndAndStartToks(ExitAndUseNamespace, 
                                           Filename, 
-                                          Namespace);
-      CurrentMQLImportNamespace = Namespace;
+                                          CurrentMQLImportNamespace);
     }
-
     return;
   }
   case tok::eod: {
