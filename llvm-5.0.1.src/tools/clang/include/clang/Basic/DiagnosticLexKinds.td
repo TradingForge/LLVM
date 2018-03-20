@@ -429,6 +429,8 @@ let CategoryName = "MQL Preprocessor Directive Issue" in {
 
 def err_pp_property_directive_not_identifier : Error<"#property name must be an identifier">;
 def err_pp_missing_property_directive_name : Error<"#property name missing">;
+def err_pp_import_directive_expects_filename_in_quotes : Error<
+  "expected \"FILENAME\"; #import without a filename is only valid at the end of an import block">;
 
 }
 

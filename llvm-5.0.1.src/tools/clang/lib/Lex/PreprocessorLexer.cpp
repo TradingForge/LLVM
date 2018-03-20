@@ -30,6 +30,18 @@ PreprocessorLexer::PreprocessorLexer(Preprocessor *pp, FileID fid)
 /// \brief After the preprocessor has parsed a \#include, lex and
 /// (potentially) macro expand the filename.
 void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
+  lexIncludeFilenameOrEmpty(FilenameTok);
+
+  // No filename?
+  if (FilenameTok.is(tok::eod))
+    PP->Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
+}
+
+/// \brief After the preprocessor has parsed a \#include or \#import, lex and
+/// (potentially) macro expand the filename.
+/// If the filename is absent, do not emit any diagnostics and
+/// return a result EOD token.
+void PreprocessorLexer::lexIncludeFilenameOrEmpty(Token &FilenameTok) {
   assert(ParsingPreprocessorDirective &&
          ParsingFilename == false &&
          "Must be in a preprocessing directive!");
@@ -45,10 +57,6 @@ void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
 
   // We should have obtained the filename now.
   ParsingFilename = false;
-
-  // No filename?
-  if (FilenameTok.is(tok::eod))
-    PP->Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
 }
 
 /// getFileEntry - Return the FileEntry corresponding to this FileID.  Like

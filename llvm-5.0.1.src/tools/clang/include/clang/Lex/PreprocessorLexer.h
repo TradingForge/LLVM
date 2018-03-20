@@ -138,6 +138,12 @@ public:
   /// If the sequence parsed is not lexically legal, emit a diagnostic and
   /// return a result EOD token.
   void LexIncludeFilename(Token &Result);
+  /// \brief After the preprocessor has parsed a \#include or \#import, lex and
+  /// (potentially) macro expand the filename.
+  ///
+  /// If the filename is absent, do not emit any diagnostics and
+  /// return a result EOD token.
+  void lexIncludeFilenameOrEmpty(Token &Result);
 
   /// \brief Inform the lexer whether or not we are currently lexing a
   /// preprocessor directive.
