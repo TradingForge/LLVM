@@ -3210,6 +3210,24 @@ LexNextToken:
     // treat U like the start of an identifier.
     return LexIdentifier(Result, CurPtr);
 
+  case 'C': // Identifier (Clang) or MQL color literal (C'128,128,128', C'0x00,0x00,0xFF')
+    // Notify MIOpt that we read a non-whitespace/non-comment token.
+    MIOpt.ReadToken();
+    if (Char == 'C' && LangOpts.MQL) {
+      Char = getCharAndSize(CurPtr, SizeTmp);
+
+      // TODO: Introduce tok::mql_color_literal?
+      // MQL color literal
+      if (Char == '\'') {
+        // return LexMQLColorLiteral(Result, 
+        //                           ConsumeChar(CurPtr, SizeTmp, Result),
+        //                           tok::numeric_constant);
+      }
+    }
+
+    // treat C like the start of an identifier.
+    return LexIdentifier(Result, CurPtr);
+
   case 'R': // Identifier or C++0x raw string literal
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
