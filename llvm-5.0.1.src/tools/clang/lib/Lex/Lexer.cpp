@@ -3210,7 +3210,8 @@ LexNextToken:
     // treat U like the start of an identifier.
     return LexIdentifier(Result, CurPtr);
 
-  case 'C': // Identifier (Clang) or MQL color literal (C'128,128,128', C'0x00,0x00,0xFF')
+  case 'C': // Identifier (Clang) or MQL color literal 
+            // (C'128,128,128', C'0x00,0x00,0xFF')
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     if (Char == 'C' && LangOpts.MQL) {
@@ -3226,6 +3227,26 @@ LexNextToken:
     }
 
     // treat C like the start of an identifier.
+    return LexIdentifier(Result, CurPtr);
+
+  case 'D': // Identifier (Clang) or MQL datetime literal 
+            // (D'1980.07.19 12:30:27', D'19.07.1980 12', 
+            //  D'01.01.2004', D'12:30:27', D'')
+    // Notify MIOpt that we read a non-whitespace/non-comment token.
+    MIOpt.ReadToken();
+    if (Char == 'D' && LangOpts.MQL) {
+      Char = getCharAndSize(CurPtr, SizeTmp);
+
+      // TODO: Introduce tok::mql_datetime_literal?
+      // MQL color literal
+      if (Char == '\'') {
+        // return LexMQLDateTimeLiteral(Result, 
+        //                          ConsumeChar(CurPtr, SizeTmp, Result),
+        //                          tok::numeric_constant);
+      }
+    }
+
+    // treat D like the start of an identifier.
     return LexIdentifier(Result, CurPtr);
 
   case 'R': // Identifier or C++0x raw string literal
@@ -3270,7 +3291,7 @@ LexNextToken:
     LLVM_FALLTHROUGH;
 
   // C99 6.4.2: Identifiers.
-  case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G':
+  case 'A': case 'B':    /*'C'*/   /*'D'*/case 'E': case 'F': case 'G':
   case 'H': case 'I': case 'J': case 'K':    /*'L'*/case 'M': case 'N':
   case 'O': case 'P': case 'Q':    /*'R'*/case 'S': case 'T':    /*'U'*/
   case 'V': case 'W': case 'X': case 'Y': case 'Z':
