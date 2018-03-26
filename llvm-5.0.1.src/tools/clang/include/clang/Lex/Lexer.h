@@ -631,6 +631,8 @@ private:
   bool LexAngledStringLiteral(Token &Result, const char *CurPtr);
   bool LexCharConstant       (Token &Result, const char *CurPtr,
                               tok::TokenKind Kind);
+  bool LexMQLColorLiteral    (Token &Result, const char *CurPtr);
+  bool LexMQLDateTimeLiteral (Token &Result, const char *CurPtr);
   bool LexEndOfFile          (Token &Result, const char *CurPtr);
   bool SkipWhitespace        (Token &Result, const char *CurPtr,
                               bool &TokAtPhysicalStartOfLine);

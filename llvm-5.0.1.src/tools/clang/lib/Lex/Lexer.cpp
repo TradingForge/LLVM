@@ -1996,6 +1996,66 @@ bool Lexer::LexCharConstant(Token &Result, const char *CurPtr,
   return true;
 }
 
+/// LexMQLColorLiteral - Lex the remainder of a character constant, 
+/// after having lexed either C'.
+bool Lexer::LexMQLColorLiteral(Token &Result, const char *CurPtr) {
+  // The color type is intended for storing information about 
+  // color and occupies 4 bytes in memory. 
+  // The first byte is ignored, the remaining 3 bytes 
+  // contain the RGB-components.
+  // Color constants can be represented in three ways: literally, by integers, 
+  // or by name (for named Web-colors only).
+  // Literal representation consists of three parts representing 
+  // numerical rate values of the three main color components: red, green, blue. 
+  // The constant starts with C and is enclosed in single quotes. 
+  // Numerical rate values of a color component lie in the range from 0 to 255.
+  //
+  // Examples of literals:
+  //
+  // C'128,128,128'    // Gray
+  // C'0x00,0x00,0xFF' // Blue
+
+  // Update the location of token as well as BufferPtr.
+  // const char *TokStart = BufferPtr;
+  // FormTokenWithChars(Result, CurPtr, tok::mql_color_literal);
+  // Result.setLiteralData(TokStart);
+  // return true;
+
+  return false;
+}
+
+/// LexMQLDateTimeLiteral - Lex the remainder of an mql datetime literal, 
+/// after having lexed either D'.
+bool Lexer::LexMQLDateTimeLiteral(Token &Result, const char *CurPtr) {
+  // The datetime type is intended for storing the date and time 
+  // as the number of seconds elapsed since January 01, 1970. 
+  // This type occupies 8 bytes of memory.
+  // Constants of the date and time can be represented as a literal string, 
+  // which consists of 6 parts showing the numerical value of 
+  // the year, month, day (or day, month, year), hours, minutes and seconds. 
+  // The constant is enclosed in single quotation marks and starts with the D character.
+  // Values range from 1 January, 1970 to 31 December, 3000. 
+  // Either date (year , month, day) or time (hours, minutes, seconds), 
+  // or all together can be omitted.
+  //
+  // D'2015.01.01 00:00';           // Time of beginning of year 2015
+  // D'1980.07.19 12:30:27';        // Year Month Day Hours Minutes Seconds
+  // D'19.07.1980 12:30:27';        // Equal to D'1980.07.19 12:30:27';
+  // D'19.07.1980 12';              // Equal to D'1980.07.19 12:00:00'
+  // D'01.01.2004';                 // Equal to D'01.01.2004 00:00:00'
+  //--- Examples of declarations after which compiler warnings will be returned
+  //datetime warning1=D'12:30:27';  // Equal to D'[date of compilation] 12:30:27'
+  //datetime warning2=D'';          // Equal to __DATETIME__ 
+
+  // Update the location of token as well as BufferPtr.
+  // const char *TokStart = BufferPtr;
+  // FormTokenWithChars(Result, CurPtr, tok::mql_datetime_literal);
+  // Result.setLiteralData(TokStart);
+  // return true;
+
+  return false;
+}
+
 /// SkipWhitespace - Efficiently skip over a series of whitespace characters.
 /// Update BufferPtr to point to the next non-whitespace character and return.
 ///
@@ -3217,12 +3277,10 @@ LexNextToken:
     if (Char == 'C' && LangOpts.MQL) {
       Char = getCharAndSize(CurPtr, SizeTmp);
 
-      // TODO: Introduce tok::mql_color_literal?
       // MQL color literal
       if (Char == '\'') {
-        // return LexMQLColorLiteral(Result, 
-        //                           ConsumeChar(CurPtr, SizeTmp, Result),
-        //                           tok::numeric_constant);
+        return LexMQLColorLiteral(Result, 
+                                  ConsumeChar(CurPtr, SizeTmp, Result));
       }
     }
 
@@ -3237,12 +3295,10 @@ LexNextToken:
     if (Char == 'D' && LangOpts.MQL) {
       Char = getCharAndSize(CurPtr, SizeTmp);
 
-      // TODO: Introduce tok::mql_datetime_literal?
-      // MQL color literal
+      // MQL datetime literal
       if (Char == '\'') {
-        // return LexMQLDateTimeLiteral(Result, 
-        //                          ConsumeChar(CurPtr, SizeTmp, Result),
-        //                          tok::numeric_constant);
+        return LexMQLDateTimeLiteral(Result, 
+                                 ConsumeChar(CurPtr, SizeTmp, Result));
       }
     }
 

@@ -1395,6 +1395,17 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     cutOffParsing();
     return ExprError();
   }
+
+  case tok::mql_color_literal:
+    Res = Actions.ActOnMQLColorLiteral(Tok);
+    ConsumeToken();
+    break;
+
+  case tok::mql_datetime_literal:
+    Res = Actions.ActOnMQLDateTimeLiteral(Tok);
+    ConsumeToken();
+    break;
+
   case tok::l_square:
     if (getLangOpts().CPlusPlus11) {
       if (getLangOpts().ObjC1) {

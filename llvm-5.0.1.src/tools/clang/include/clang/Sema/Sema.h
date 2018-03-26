@@ -4141,6 +4141,9 @@ public:
   ExprResult ActOnStringLiteral(ArrayRef<Token> StringToks,
                                 Scope *UDLScope = nullptr);
 
+  ExprResult ActOnMQLColorLiteral(const Token &Tok);
+  ExprResult ActOnMQLDateTimeLiteral(const Token &Tok);
+
   ExprResult ActOnGenericSelectionExpr(SourceLocation KeyLoc,
                                        SourceLocation DefaultLoc,
                                        SourceLocation RParenLoc,

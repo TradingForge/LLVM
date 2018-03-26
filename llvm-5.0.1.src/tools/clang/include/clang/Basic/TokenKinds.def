@@ -159,6 +159,10 @@ TOK(utf8_string_literal) // u8"foo"
 TOK(utf16_string_literal)// u"foo"
 TOK(utf32_string_literal)// U"foo"
 
+// MQL Support.
+TOK(mql_color_literal)   // C'128,128,128', C'0x00,0x00,0xFF'
+TOK(mql_datetime_literal)// D'1980.07.19 12:30:27'
+
 // C99 6.4.6: Punctuators.
 PUNCTUATOR(l_square,            "[")
 PUNCTUATOR(r_square,            "]")

@@ -3477,6 +3477,14 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
   return Res;
 }
 
+ExprResult Sema::ActOnMQLColorLiteral(const Token &Tok) {
+  return ExprError();
+}
+
+ExprResult Sema::ActOnMQLDateTimeLiteral(const Token &Tok) {
+  return ExprError();
+}
+
 ExprResult Sema::ActOnParenExpr(SourceLocation L, SourceLocation R, Expr *E) {
   assert(E && "ActOnParenExpr() missing expr");
   return new (Context) ParenExpr(L, R, E);

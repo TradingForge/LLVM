@@ -268,6 +268,36 @@ private:
   void DiagnoseLexingError(SourceLocation Loc);
 };
 
+/// MQLColorLiteralParser - Perform interpretation and semantic analysis of an
+/// MQL color literal.
+class MQLColorLiteralParser {
+public:
+  MQLColorLiteralParser();
+
+  /// GetIntegerValue - Convert this MQL color literal value to a 4bytes-wide unsgined integer.
+  /// If there is an overflow, set Val to the low
+  /// bits of the result and return true.  Otherwise, return false.
+  uint32_t getValue();
+
+private:
+
+};
+
+/// MQLColorLiteralParser - Perform interpretation and semantic analysis of an
+/// MQL color literal.
+class MQLDateTimeLiteralParser {
+public:
+  MQLDateTimeLiteralParser();
+
+  /// GetIntegerValue - Convert this MQL datetime literal value to an 8bytes-wide unsinged integer.
+  /// If there is an overflow, set Val to the low
+  /// bits of the result and return true.  Otherwise, return false.
+  uint64_t getValue();
+
+private:
+
+};
+
 }  // end namespace clang
 
 #endif

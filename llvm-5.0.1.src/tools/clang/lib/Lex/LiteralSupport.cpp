@@ -1721,3 +1721,25 @@ bool StringLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
   return NumericLiteralParser::isValidUDSuffix(LangOpts, Suffix) ||
          Suffix == "sv";
 }
+
+/// MQLColorLiteralParser - Perform interpretation and semantic analysis of an
+/// MQL color literal.
+MQLColorLiteralParser::MQLColorLiteralParser() {
+  // TODO: ...
+}
+
+/// getValue - Convert this MQL color literal value to a 4bytes-wide unsgined integer.
+uint32_t MQLColorLiteralParser::getValue() {
+  return 0;
+}
+
+/// MQLColorLiteralParser - Perform interpretation and semantic analysis of an
+/// MQL color literal.
+MQLDateTimeLiteralParser::MQLDateTimeLiteralParser() {
+  // TODO: ...
+}
+
+/// geValue - Convert this MQL datetime literal value to an 8bytes-wide unsinged integer.
+uint64_t MQLDateTimeLiteralParser::getValue() {
+  return 0;
+}
