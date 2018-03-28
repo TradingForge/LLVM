@@ -129,6 +129,16 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
     Callbacks->FileChanged(CurLexer->getFileLoc(),
                            PPCallbacks::EnterFile, FileType);
   }
+
+  if (getLangOpts().MQL && !isInPrimaryFile() && !CurLexer->Is_PragmaLexer) {
+    auto FileEntry = SourceMgr.getFileEntryForID(CurLexer->getFileID());
+    // MQL's mqh files should be treated as 
+    // if they had #pragma once at the top.
+    // Even though #pragma once is not spelled out explicitly.
+    if (FileEntry && FileEntry->getName().endswith_lower(".mqh")) {
+      HeaderInfo.MarkFileIncludeOnce(FileEntry);
+    }
+  }
 }
 
 /// EnterSourceFileWithPTH - Add a source file to the top of the include stack
