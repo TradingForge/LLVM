@@ -1726,6 +1726,9 @@ bool StringLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
 /// MQL color literal.
 MQLColorLiteralParser::MQLColorLiteralParser() {
   // TODO: ...
+  // TODO: An empty color literal C'' is most likely an error, not a warning?
+  // TODO: Introduce diag::err_empty_mql_color_literal
+
 }
 
 /// getValue - Convert this MQL color literal value to a 4bytes-wide unsgined integer.
@@ -1737,6 +1740,8 @@ uint32_t MQLColorLiteralParser::getValue() {
 /// MQL color literal.
 MQLDateTimeLiteralParser::MQLDateTimeLiteralParser() {
   // TODO: ...
+  // TODO: An empty datetime literal D'' is a warning.
+  // TODO: Introduce diag::warn_empty_mql_datetime_literal?
 }
 
 /// geValue - Convert this MQL datetime literal value to an 8bytes-wide unsinged integer.

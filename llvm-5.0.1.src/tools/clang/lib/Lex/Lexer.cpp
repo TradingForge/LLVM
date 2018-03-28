@@ -1997,7 +1997,7 @@ bool Lexer::LexCharConstant(Token &Result, const char *CurPtr,
 }
 
 /// LexMQLColorLiteral - Lex the remainder of a character constant, 
-/// after having lexed either C'.
+/// after having lexed C'.
 bool Lexer::LexMQLColorLiteral(Token &Result, const char *CurPtr) {
   // The color type is intended for storing information about 
   // color and occupies 4 bytes in memory. 
@@ -2015,17 +2015,45 @@ bool Lexer::LexMQLColorLiteral(Token &Result, const char *CurPtr) {
   // C'128,128,128'    // Gray
   // C'0x00,0x00,0xFF' // Blue
 
-  // Update the location of token as well as BufferPtr.
-  // const char *TokStart = BufferPtr;
-  // FormTokenWithChars(Result, CurPtr, tok::mql_color_literal);
-  // Result.setLiteralData(TokStart);
-  // return true;
+  assert(LangOpts.MQL && 
+    "LexMQLColorLiteral must only be used in MQL lang mode");
 
-  return false;
+  // Does this character contain the \0 character?
+  const char *NulCharacter = nullptr;
+
+  char C = getAndAdvanceChar(CurPtr, Result);
+  while (C != '\'') {
+    // Skip escaped characters.
+    if (C == '\\')
+      C = getAndAdvanceChar(CurPtr, Result);
+
+    if (C == '\n' || C == '\r' ||             // Newline.
+        (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
+      if (!isLexingRawMode())
+        Diag(BufferPtr, diag::ext_unterminated_char_or_string) << 0;
+      FormTokenWithChars(Result, CurPtr-1, tok::unknown);
+      return true;
+    }
+
+    if (C == 0) {
+      NulCharacter = CurPtr-1;
+    }
+    C = getAndAdvanceChar(CurPtr, Result);
+  }
+
+  // If a nul character existed in the color literal, warn about it.
+  if (NulCharacter && !isLexingRawMode())
+    Diag(NulCharacter, diag::null_in_char_or_string) << 0;
+
+  // Update the location of token as well as BufferPtr.
+  const char *TokStart = BufferPtr;
+  FormTokenWithChars(Result, CurPtr, tok::mql_color_literal);
+  Result.setLiteralData(TokStart);
+  return true;
 }
 
 /// LexMQLDateTimeLiteral - Lex the remainder of an mql datetime literal, 
-/// after having lexed either D'.
+/// after having lexed D'.
 bool Lexer::LexMQLDateTimeLiteral(Token &Result, const char *CurPtr) {
   // The datetime type is intended for storing the date and time 
   // as the number of seconds elapsed since January 01, 1970. 
@@ -2047,13 +2075,41 @@ bool Lexer::LexMQLDateTimeLiteral(Token &Result, const char *CurPtr) {
   //datetime warning1=D'12:30:27';  // Equal to D'[date of compilation] 12:30:27'
   //datetime warning2=D'';          // Equal to __DATETIME__ 
 
-  // Update the location of token as well as BufferPtr.
-  // const char *TokStart = BufferPtr;
-  // FormTokenWithChars(Result, CurPtr, tok::mql_datetime_literal);
-  // Result.setLiteralData(TokStart);
-  // return true;
+  assert(LangOpts.MQL && 
+    "LexMQLDateTimeLiteral must only be used in MQL lang mode");
 
-  return false;
+  // Does this character contain the \0 character?
+  const char *NulCharacter = nullptr;
+
+  char C = getAndAdvanceChar(CurPtr, Result);
+  while (C != '\'') {
+    // Skip escaped characters.
+    if (C == '\\')
+      C = getAndAdvanceChar(CurPtr, Result);
+
+    if (C == '\n' || C == '\r' ||             // Newline.
+        (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
+      if (!isLexingRawMode())
+        Diag(BufferPtr, diag::ext_unterminated_char_or_string) << 0;
+      FormTokenWithChars(Result, CurPtr-1, tok::unknown);
+      return true;
+    }
+
+    if (C == 0) {
+      NulCharacter = CurPtr-1;
+    }
+    C = getAndAdvanceChar(CurPtr, Result);
+  }
+
+  // If a nul character existed in the datetime literal, warn about it.
+  if (NulCharacter && !isLexingRawMode())
+    Diag(NulCharacter, diag::null_in_char_or_string) << 0;
+
+  // Update the location of token as well as BufferPtr.
+  const char *TokStart = BufferPtr;
+  FormTokenWithChars(Result, CurPtr, tok::mql_datetime_literal);
+  Result.setLiteralData(TokStart);
+  return true;
 }
 
 /// SkipWhitespace - Efficiently skip over a series of whitespace characters.
