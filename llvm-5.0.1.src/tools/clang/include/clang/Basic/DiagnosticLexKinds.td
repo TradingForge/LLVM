@@ -244,6 +244,15 @@ def warn_bad_character_encoding : ExtWarn<
 def err_lexing_string : Error<"failure when lexing a string">;
 def err_placeholder_in_source : Error<"editor placeholder in source file">;
 
+let CategoryName = "MQL Lexical Issue" in {
+
+def err_unterminated_mql_color_literal : Error<
+  "mql color literal missing terminating delimiter '">;
+def err_unterminated_mql_datetime_literal : Error<
+  "mql datetime literal missing terminating delimiter '">;
+
+}
+
 
 //===----------------------------------------------------------------------===//
 // PTH Diagnostics

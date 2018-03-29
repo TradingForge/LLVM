@@ -633,6 +633,8 @@ private:
                               tok::TokenKind Kind);
   bool LexMQLColorLiteral    (Token &Result, const char *CurPtr);
   bool LexMQLDateTimeLiteral (Token &Result, const char *CurPtr);
+  bool LexMQLLiteral         (Token &Result, const char *CurPtr, 
+                              tok::TokenKind Kind, unsigned DiagID);
   bool LexEndOfFile          (Token &Result, const char *CurPtr);
   bool SkipWhitespace        (Token &Result, const char *CurPtr,
                               bool &TokAtPhysicalStartOfLine);

@@ -2017,39 +2017,8 @@ bool Lexer::LexMQLColorLiteral(Token &Result, const char *CurPtr) {
 
   assert(LangOpts.MQL && 
     "LexMQLColorLiteral must only be used in MQL lang mode");
-
-  // Does this character contain the \0 character?
-  const char *NulCharacter = nullptr;
-
-  char C = getAndAdvanceChar(CurPtr, Result);
-  while (C != '\'') {
-    // Skip escaped characters.
-    if (C == '\\')
-      C = getAndAdvanceChar(CurPtr, Result);
-
-    if (C == '\n' || C == '\r' ||             // Newline.
-        (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
-      if (!isLexingRawMode())
-        Diag(BufferPtr, diag::ext_unterminated_char_or_string) << 0;
-      FormTokenWithChars(Result, CurPtr-1, tok::unknown);
-      return true;
-    }
-
-    if (C == 0) {
-      NulCharacter = CurPtr-1;
-    }
-    C = getAndAdvanceChar(CurPtr, Result);
-  }
-
-  // If a nul character existed in the color literal, warn about it.
-  if (NulCharacter && !isLexingRawMode())
-    Diag(NulCharacter, diag::null_in_char_or_string) << 0;
-
-  // Update the location of token as well as BufferPtr.
-  const char *TokStart = BufferPtr;
-  FormTokenWithChars(Result, CurPtr, tok::mql_color_literal);
-  Result.setLiteralData(TokStart);
-  return true;
+  return LexMQLLiteral(Result, CurPtr, tok::mql_color_literal, 
+                       diag::err_unterminated_mql_color_literal);
 }
 
 /// LexMQLDateTimeLiteral - Lex the remainder of an mql datetime literal, 
@@ -2077,6 +2046,17 @@ bool Lexer::LexMQLDateTimeLiteral(Token &Result, const char *CurPtr) {
 
   assert(LangOpts.MQL && 
     "LexMQLDateTimeLiteral must only be used in MQL lang mode");
+  return LexMQLLiteral(Result, CurPtr, tok::mql_datetime_literal, 
+                       diag::err_unterminated_mql_datetime_literal);
+}
+
+/// LexMQLDateTimeLiteral - Lex the remainder of either an mql color or datetime literal, 
+/// after having either lexed C' or D'.
+bool Lexer::LexMQLLiteral(Token &Result, const char *CurPtr, 
+                          tok::TokenKind Kind, unsigned DiagID) {
+
+  assert(LangOpts.MQL && 
+    "LexMQLLiteral must only be used in MQL lang mode");
 
   // Does this character contain the \0 character?
   const char *NulCharacter = nullptr;
@@ -2090,7 +2070,8 @@ bool Lexer::LexMQLDateTimeLiteral(Token &Result, const char *CurPtr) {
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
       if (!isLexingRawMode())
-        Diag(BufferPtr, diag::ext_unterminated_char_or_string) << 0;
+        Diag(BufferPtr, DiagID);
+
       FormTokenWithChars(Result, CurPtr-1, tok::unknown);
       return true;
     }
@@ -2107,7 +2088,7 @@ bool Lexer::LexMQLDateTimeLiteral(Token &Result, const char *CurPtr) {
 
   // Update the location of token as well as BufferPtr.
   const char *TokStart = BufferPtr;
-  FormTokenWithChars(Result, CurPtr, tok::mql_datetime_literal);
+  FormTokenWithChars(Result, CurPtr, Kind);
   Result.setLiteralData(TokStart);
   return true;
 }

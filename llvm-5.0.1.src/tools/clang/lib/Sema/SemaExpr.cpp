@@ -3478,11 +3478,67 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
 }
 
 ExprResult Sema::ActOnMQLColorLiteral(const Token &Tok) {
-  return ExprError();
+  SmallString<128> SpellingBuffer;
+  // MQLColorLiteralParser wants to overread by one character.  Add padding to
+  // the buffer in case the token is copied to the buffer.  If getSpelling()
+  // returns a StringRef to the memory buffer, it should have a null char at
+  // the EOF, so it is also safe.
+  SpellingBuffer.resize(Tok.getLength() + 1);
+
+  // Get the spelling of the token, which eliminates trigraphs, etc.
+  bool Invalid = false;
+  StringRef TokSpelling = PP.getSpelling(Tok, SpellingBuffer, &Invalid);
+  if (Invalid)
+    return ExprError();
+
+  MQLColorLiteralParser Literal(TokSpelling, Tok.getLocation(), PP);
+  if (Literal.hadError)
+    return ExprError();
+
+  const auto MQLColorBitWidth = 32;
+  // We assume UnsignedIntTy's width to be 32 bits.
+  // We are only interested in AST in case of MQL parsing,
+  // so while the assumtion does not hold on all platforms it will do.
+  QualType Ty = Context.UnsignedIntTy;
+  assert(Context.getTypeSize(Ty) == MQLColorBitWidth &&
+    "ActOnMQLColorLiteral expects 32 bit wide unsigned int");
+
+  llvm::APInt ResultVal(MQLColorBitWidth, Literal.getValue());
+  auto Res = IntegerLiteral::Create(Context, ResultVal, Ty, Tok.getLocation());
+
+  return Res;
 }
 
 ExprResult Sema::ActOnMQLDateTimeLiteral(const Token &Tok) {
-  return ExprError();
+  SmallString<128> SpellingBuffer;
+  // MQLDateTimeLiteralParser wants to overread by one character.  Add padding to
+  // the buffer in case the token is copied to the buffer.  If getSpelling()
+  // returns a StringRef to the memory buffer, it should have a null char at
+  // the EOF, so it is also safe.
+  SpellingBuffer.resize(Tok.getLength() + 1);
+
+  // Get the spelling of the token, which eliminates trigraphs, etc.
+  bool Invalid = false;
+  StringRef TokSpelling = PP.getSpelling(Tok, SpellingBuffer, &Invalid);
+  if (Invalid)
+    return ExprError();
+
+  MQLDateTimeLiteralParser Literal(TokSpelling, Tok.getLocation(), PP);
+  if (Literal.hadError)
+    return ExprError();
+
+  const auto MQLDateTimeBitWidth = 64;
+  // We assume UnsignedLongLongTy's width to be 64 bits.
+  // We are only interested in AST in case of MQL parsing,
+  // so while the assumtion does not hold on all platforms it will do.
+  QualType Ty = Context.UnsignedLongLongTy;
+  assert(Context.getTypeSize(Ty) == MQLDateTimeBitWidth &&
+    "ActOnMQLColorLiteral expects 64 bit wide unsigned int");
+
+  llvm::APInt ResultVal(MQLDateTimeBitWidth, Literal.getValue());
+  auto Res = IntegerLiteral::Create(Context, ResultVal, Ty, Tok.getLocation());
+
+  return Res;
 }
 
 ExprResult Sema::ActOnParenExpr(SourceLocation L, SourceLocation R, Expr *E) {

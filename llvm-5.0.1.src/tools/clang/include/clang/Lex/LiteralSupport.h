@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the NumericLiteralParser, CharLiteralParser, and
-// StringLiteralParser interfaces.
+// This file defines the NumericLiteralParser, CharLiteralParser, 
+// StringLiteralParser, MQLColorLiteralParser, and MQLDateTimeLiteralParser interfaces.
 //
 //===----------------------------------------------------------------------===//
 
@@ -272,7 +272,10 @@ private:
 /// MQL color literal.
 class MQLColorLiteralParser {
 public:
-  MQLColorLiteralParser();
+  MQLColorLiteralParser(StringRef TokSpelling,
+                        SourceLocation TokLoc,
+                        Preprocessor &PP);
+  bool hadError : 1;
 
   /// GetIntegerValue - Convert this MQL color literal value to a 4bytes-wide unsgined integer.
   /// If there is an overflow, set Val to the low
@@ -287,7 +290,10 @@ private:
 /// MQL color literal.
 class MQLDateTimeLiteralParser {
 public:
-  MQLDateTimeLiteralParser();
+  MQLDateTimeLiteralParser(StringRef TokSpelling,
+                           SourceLocation TokLoc,
+                           Preprocessor &PP);
+  bool hadError : 1;
 
   /// GetIntegerValue - Convert this MQL datetime literal value to an 8bytes-wide unsinged integer.
   /// If there is an overflow, set Val to the low
