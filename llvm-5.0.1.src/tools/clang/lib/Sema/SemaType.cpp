@@ -4062,6 +4062,37 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         D.setInvalidType(true);
         // Build the type anyway.
       }
+
+      if (LangOpts.MQL) {
+        // MQL interprets a function parameter declared as 
+        // "some_type &param[]" as a reference to an array of some_type.
+        // This is in contrast with C++, 
+        // where such a parameter declaration is interpreted
+        // as an array of references to some_type and
+        // is triggers a compile time error.
+        if (chunkIndex > 0) {
+          const unsigned nextChunkIndex = chunkIndex - 1;
+          DeclaratorChunk &NextDeclType = D.getTypeObject(nextChunkIndex);
+          if (NextDeclType.Kind == DeclaratorChunk::Array) {
+            // We are in MQL compatibility mode.
+            // And have a parameter declaration of the form
+            // "some_type &param[]".
+            // We need to get GetFullTypeForDeclarator to interpret it as
+            // a reference to an array of some_type.
+            // Swapping the reference and array chunks does the trick. 
+            DeclaratorChunk DeclChunkReference = DeclType;
+            DeclType = NextDeclType;
+            NextDeclType = DeclChunkReference;
+
+            // We just replaced the chunk at chunkIndex.
+            // Force the loop to go over the same chunkIndex again
+            // so the new chunk at that position gets processed.
+            --i;
+            continue;
+          }
+        }
+      }
+
       T = S.BuildReferenceType(T, DeclType.Ref.LValueRef, DeclType.Loc, Name);
 
       if (DeclType.Ref.HasRestrict)
