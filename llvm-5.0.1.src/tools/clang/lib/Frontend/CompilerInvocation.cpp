@@ -1703,7 +1703,17 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
       LangStd = LangStandard::lang_c99;
       break;
     case InputKind::MQL:
-      LangStd = LangStandard::lang_gnucxx98;
+      // We declare at least the "datetime", "color", 
+      // and "string" built-in types as stucts.
+      // These structs have to have converting constructors
+      // (e. g., converting 32 bit int to "color")
+      // which makes them non-POD types.
+      // Clang warns on passing a non-POD objects as 
+      // a variable argument to a variadic function.
+      // Hence, we need to declare such functions 
+      // as variadic templates instead.
+      // Variadic tempaltes are a feature of C++11.
+      LangStd = LangStandard::lang_gnucxx11;
       break;
     }
   }

@@ -10625,7 +10625,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // external linkage, so don't warn in that case. If selectany is present,
     // this might be header code intended for C and C++ inclusion, so apply the
     // C++ rules.
+    // In MQL, extern has different semantics compared to C++
+    // and it's normal to initialize a variable declared as extern.
     if (VDecl->getStorageClass() == SC_Extern &&
+        !getLangOpts().MQL && 
         ((!getLangOpts().CPlusPlus && !VDecl->hasAttr<SelectAnyAttr>()) ||
          !Context.getBaseElementType(VDecl->getType()).isConstQualified()) &&
         !(getLangOpts().CPlusPlus && VDecl->isExternC()) &&
@@ -10847,10 +10850,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     // Provide a specific diagnostic for uninitialized variable
     // definitions with incomplete array type.
     if (Type->isIncompleteArrayType()) {
-      Diag(Var->getLocation(),
-           diag::err_typecheck_incomplete_array_needs_initializer);
-      Var->setInvalidDecl();
-      return;
+      // MQL allows variables declared with an incomplete array type.
+      if (!getLangOpts().MQL) {
+        Diag(Var->getLocation(),
+             diag::err_typecheck_incomplete_array_needs_initializer);
+        Var->setInvalidDecl();
+        return;
+      }
     }
 
     // Provide a specific diagnostic for uninitialized variable
