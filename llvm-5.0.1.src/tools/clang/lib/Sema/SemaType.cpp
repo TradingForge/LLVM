@@ -4069,7 +4069,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // This is in contrast with C++, 
         // where such a parameter declaration is interpreted
         // as an array of references to some_type and
-        // is triggers a compile time error.
+        // triggers a compile time error.
+        // C++ interprets "some_type param[]" as 
+        // a reference to an array of some_type.
+        // So, if we ignore the reference declarator chunk,
+        // we'll get a reference to an array from sema.
+        // Which is exactly what we're looking for.
         if (chunkIndex > 0) {
           const unsigned nextChunkIndex = chunkIndex - 1;
           DeclaratorChunk &NextDeclType = D.getTypeObject(nextChunkIndex);
@@ -4079,15 +4084,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             // "some_type &param[]".
             // We need to get GetFullTypeForDeclarator to interpret it as
             // a reference to an array of some_type.
-            // Swapping the reference and array chunks does the trick. 
-            DeclaratorChunk DeclChunkReference = DeclType;
-            DeclType = NextDeclType;
-            NextDeclType = DeclChunkReference;
+            // Removing the reference chunk does the trick. 
+            D.dropTypeObject(chunkIndex);
 
-            // We just replaced the chunk at chunkIndex.
+            // We just removed the chunk at chunkIndex.
             // Force the loop to go over the same chunkIndex again
             // so the new chunk at that position gets processed.
             --i;
+            --e;
             continue;
           }
         }

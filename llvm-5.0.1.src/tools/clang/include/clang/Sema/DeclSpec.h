@@ -2170,6 +2170,12 @@ public:
     return type_object_range(DeclTypeInfo.begin(), DeclTypeInfo.end());
   }
 
+  void dropTypeObject(unsigned i) {
+    assert(i < DeclTypeInfo.size() && "Invalid type chunk to drop");
+    auto it = DeclTypeInfo.begin() + i;
+    (*it).destroy();
+    DeclTypeInfo.erase(it);
+  }
   void DropFirstTypeObject() {
     assert(!DeclTypeInfo.empty() && "No type chunks to drop.");
     DeclTypeInfo.front().destroy();

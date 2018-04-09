@@ -503,7 +503,17 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
     bool OldParamHasDfl = OldParam ? OldParam->hasDefaultArg() : false;
     bool NewParamHasDfl = NewParam->hasDefaultArg();
 
-    if (OldParamHasDfl && NewParamHasDfl) {
+    // MQL allows forward referencing function calls.
+    // To accomodate these semantics an external tool is used 
+    // to generated forward declarations for all function definitions
+    // in the relevant source tree.
+    // We have to keep default argument values in generated
+    // forward declarations, but also don't want to alter 
+    // the original MQL source files. As a result there are duplication 
+    // of the default arguments. 
+    // To avoid compilations emitting err_param_default_argument_redefinition
+    // we check whether we are compiling in the MQL mode.
+    if (OldParamHasDfl && NewParamHasDfl && !getLangOpts().MQL) {
       unsigned DiagDefaultParamID =
         diag::err_param_default_argument_redefinition;
 
