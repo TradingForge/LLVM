@@ -1245,6 +1245,12 @@ private:
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
   static void LateTemplateParserCleanupCallback(void *P);
 
+  void lexFunctionForLateParsing(CachedTokens &BodyToks);
+  void parseLateFuncDef(LateParsedFunction &LateParsedFunc);
+
+  static void lateFunctionParserCallback(void *OpaqueParser, 
+                                         LateParsedFunction &LateParsedFunc);
+
   Sema::ParsingClassState
   PushParsingClass(Decl *TagOrTemplate, bool TopLevelClass, bool IsInterface);
   void DeallocateParsedClasses(ParsingClass *Class);

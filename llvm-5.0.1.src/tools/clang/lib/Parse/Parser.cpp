@@ -593,6 +593,9 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     return false;
 
   case tok::eof:
+    if (getLangOpts().MQL)
+      Actions.setLateFunctionParser(lateFunctionParserCallback, this);
+
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)
       Actions.SetLateTemplateParser(LateTemplateParserCallback,
@@ -1257,29 +1260,27 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     Scope *ParentScope = getCurScope()->getParent();
 
     D.setFunctionDefinitionKind(FDK_Definition);
-    Decl *DP = Actions.HandleDeclarator(ParentScope, D,
+    Decl *Decl = Actions.HandleDeclarator(ParentScope, D,
                                         MultiTemplateParamsArg());
-    D.complete(DP);
+    D.complete(Decl);
     D.getMutableDeclSpec().abort();
 
-    if (SkipFunctionBodies && (!DP || Actions.canSkipFunctionBody(DP)) &&
+    if (SkipFunctionBodies && (!Decl || Actions.canSkipFunctionBody(Decl)) &&
         trySkippingFunctionBody()) {
       BodyScope.Exit();
-      return Actions.ActOnSkippedFunctionBody(DP);
+      return Actions.ActOnSkippedFunctionBody(Decl);
     }
 
     CachedTokens Toks;
-    // LexFunctionForLateParsing(Toks);
-    LexTemplateFunctionForLateParsing(Toks);
+    lexFunctionForLateParsing(Toks);
 
-    if (DP) {
-      FunctionDecl *FnD = DP->getAsFunction();
-      Actions.CheckForFunctionRedefinition(FnD);
-      // Actions.MarkAsLateParsedFunction(FnD, DP, Toks);
-      Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
-      FnD->setWillHaveBody(true);
+    if (Decl) {
+      auto *FuncDecl = Decl->getAsFunction();
+      Actions.CheckForFunctionRedefinition(FuncDecl);
+      Actions.markAsLateParsedFunction(FuncDecl, Decl, Toks);
+      FuncDecl->setWillHaveBody(true);
     }
-    return DP;
+    return Decl;
   }
 
   // Enter a scope for the function body.

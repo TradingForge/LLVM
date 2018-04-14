@@ -131,6 +131,7 @@ namespace clang {
   class LabelStmt;
   class LambdaExpr;
   class LangOptions;
+  struct LateParsedFunction;
   class LocalInstantiationScope;
   class LookupResult;
   class MacroInfo;
@@ -598,6 +599,25 @@ public:
   SmallVector<std::pair<CXXMethodDecl*, const FunctionProtoType*>, 2>
     DelayedDefaultedMemberExceptionSpecs;
 
+  llvm::SmallVector<std::unique_ptr<LateParsedFunction>, 128> 
+    LateParsedFunctions;
+
+  /// \brief Callback to the parser to parse functions when needed.
+  typedef void LateFunctionParserCB(void *OpaqueLateFunctionParser, 
+                                    LateParsedFunction &LateParsedFunc);
+  LateFunctionParserCB *LateFunctionParser;
+  void *OpaqueLateFunctionParser;
+
+  void setLateFunctionParser(LateFunctionParserCB *LateFuncParserCB,
+                             void *OpaqueLateFnParser) {
+    LateFunctionParser = LateFuncParserCB;
+    OpaqueLateFunctionParser = OpaqueLateFnParser;
+  }
+
+private:
+  void performLateFunctionsParsing();
+
+public:
   typedef llvm::MapVector<const FunctionDecl *,
                           std::unique_ptr<LateParsedTemplate>>
       LateParsedTemplateMapT;
@@ -5747,6 +5767,8 @@ public:
   void ActOnFinishDelayedMemberInitializers(Decl *Record);
   void MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
                                 CachedTokens &Toks);
+  void markAsLateParsedFunction(FunctionDecl *FunctionDecl, Decl *Decl,
+                                CachedTokens &Toks);
   void UnmarkAsLateParsedTemplate(FunctionDecl *FD);
   bool IsInsideALocalClassWithinATemplateFunction();
 
@@ -10555,6 +10577,15 @@ struct LateParsedTemplate {
   CachedTokens Toks;
   /// \brief The template function declaration to be late parsed.
   Decl *D;
+};
+
+/// \brief Contains a late parsed MQL function.
+/// Will be parsed at the end of the translation unit, used by Sema & Parser.
+struct LateParsedFunction {
+  /// \brief The function body's tokens to be late parsed.
+  CachedTokens BodyToks;
+  /// \brief The function declaration to be late parsed.
+  Decl *Decl;
 };
 
 } // end namespace clang
