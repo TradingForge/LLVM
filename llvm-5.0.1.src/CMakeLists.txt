@@ -56,9 +56,9 @@ project(LLVM
   ${cmake_3_0_LANGUAGES}
   C CXX ASM)
 
-foreach(t EXE SHARED MODULE)
-  string(REPLACE "/debug " "/debug:fastlink " CMAKE_${t}_LINKER_FLAGS_DEBUG ${CMAKE_${t}_LINKER_FLAGS_DEBUG})
-endforeach()
+#foreach(t EXE SHARED MODULE)
+#  string(REPLACE "/debug " "/debug:fastlink " CMAKE_${t}_LINKER_FLAGS_DEBUG ${CMAKE_${t}_LINKER_FLAGS_DEBUG})
+#endforeach()
    
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to Debug")

@@ -44,5 +44,6 @@ autoconf/autom4te.cache
 
 vs2017
 vs2017-pristine
+vs
 
 llvm-5.0.1.src.tar.xz

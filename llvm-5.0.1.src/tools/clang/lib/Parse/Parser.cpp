@@ -1244,6 +1244,43 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
     // FIXME: Should we really fall through here?
   }
+  // In MQL parsing mode, for a function we consume the
+  // tokens and store them for late parsing at the end of the translation unit.
+  else if (getLangOpts().MQL && 
+           // A member function's outside-of-class definition 
+           // can have '= default' or '= delete' applied to it.
+           // We want to skip such functions.
+           Tok.isNot(tok::equal) &&
+           TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate &&
+           Actions.canDelayFunctionBody(D)) {
+    ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
+    Scope *ParentScope = getCurScope()->getParent();
+
+    D.setFunctionDefinitionKind(FDK_Definition);
+    Decl *DP = Actions.HandleDeclarator(ParentScope, D,
+                                        MultiTemplateParamsArg());
+    D.complete(DP);
+    D.getMutableDeclSpec().abort();
+
+    if (SkipFunctionBodies && (!DP || Actions.canSkipFunctionBody(DP)) &&
+        trySkippingFunctionBody()) {
+      BodyScope.Exit();
+      return Actions.ActOnSkippedFunctionBody(DP);
+    }
+
+    CachedTokens Toks;
+    // LexFunctionForLateParsing(Toks);
+    LexTemplateFunctionForLateParsing(Toks);
+
+    if (DP) {
+      FunctionDecl *FnD = DP->getAsFunction();
+      Actions.CheckForFunctionRedefinition(FnD);
+      // Actions.MarkAsLateParsedFunction(FnD, DP, Toks);
+      Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
+      FnD->setWillHaveBody(true);
+    }
+    return DP;
+  }
 
   // Enter a scope for the function body.
   ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
