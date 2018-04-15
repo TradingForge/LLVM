@@ -5833,6 +5833,20 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
       return true;
   }
 
+  // In MQL '"power level: " + 9000.1' is a valid expression of type string
+  // To support such expressions we allow overloading of 
+  // 'operator+ (const char *, double/int/etc.)'
+  if (Context.getLangOpts().MQL && 
+    Fn->getOverloadedOperator() == OO_Plus) {
+    if (const ArrayType *ATy = 
+          dyn_cast<ConstantArrayType>(T1.getTypePtr())) {
+      auto const & ElementType = ATy->getElementType();
+      if (ElementType.isConstQualified() && 
+          ElementType->isCharType())
+        return true;
+    }
+  }
+
   return false;
 }
 

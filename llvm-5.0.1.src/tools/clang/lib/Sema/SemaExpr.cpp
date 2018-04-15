@@ -11847,6 +11847,20 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     if (LHSExpr->getType()->isOverloadableType() ||
         RHSExpr->getType()->isOverloadableType())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
+
+    // In MQL '"power level: " + 9000.1' is a valid expression of type string
+    // To support such expressions we allow overloading of
+    // 'operator+ (const char *, double/int/etc.)'
+    if (LangOpts.MQL && Opc == BO_Add) {
+      auto const & LHSType = LHSExpr->getType();
+      if (const ArrayType *ATy = 
+            dyn_cast<ConstantArrayType>(LHSType.getTypePtr())) {
+        auto const & ElementType = ATy->getElementType();
+        if (ElementType.isConstQualified() && 
+            ElementType->isCharType())
+          return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
+      }
+    }
   }
 
   // Build a built-in binary operation.

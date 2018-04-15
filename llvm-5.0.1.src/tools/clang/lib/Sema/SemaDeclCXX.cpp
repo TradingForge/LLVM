@@ -12718,10 +12718,28 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
       }
     }
 
-    if (!ClassOrEnumParam)
-      return Diag(FnDecl->getLocation(),
-                  diag::err_operator_overload_needs_class_or_enum)
-        << FnDecl->getDeclName();
+    if (!ClassOrEnumParam) {
+      bool Valid = false;
+      // In MQL '"power level: " + 9000.1' is a valid expression of type string
+      // To support such expressions we allow overloading of
+      // 'operator+ (const char *, double/int/etc.)'
+      if (LangOpts.MQL && Op == OO_Plus && 
+          FnDecl->parameters().size() == 2) {
+        auto const & LHSType = FnDecl->parameters().front()
+                                         ->getType();
+        if (LHSType->isPointerType()) {
+          auto const & PointeeType = LHSType->getPointeeType();
+          Valid = PointeeType.isConstQualified() && 
+                  PointeeType->isCharType();
+        }
+      }
+
+      if (!Valid) {
+        return Diag(FnDecl->getLocation(),
+                    diag::err_operator_overload_needs_class_or_enum)
+          << FnDecl->getDeclName();
+      }
+    }
   }
 
   // C++ [over.oper]p8:
