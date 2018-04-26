@@ -532,9 +532,15 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
               continue;
             return V.getValue();
           }
-        } else if (VisitDeclContext(
-                                CXXUnit->getASTContext().getTranslationUnitDecl()))
-          return true;
+        } else {
+          auto * TUDecl = CXXUnit->getASTContext().getTranslationUnitDecl();
+          // In MQL mode each #property directive is converted to 
+          // an annotation attribute attached to the translation unit.
+          // So we need to visit attributes when
+          // handling CXCursor_TranslationUnit.
+          if (VisitAttributes(TUDecl) || VisitDeclContext(TUDecl))
+            return true;
+        }
         continue;
       }
 

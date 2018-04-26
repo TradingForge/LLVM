@@ -17,7 +17,83 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Lex/PropertyDirectiveInfo.h"
 using namespace clang;
+
+/// \brief Handle the annotation token produced for
+/// #property ...
+void Parser::handleDirectiveProperty(ParsedAttributesWithRange &attrs) {
+  const auto Info = reinterpret_cast<PropertyDirectiveInfo *>(Tok.getAnnotationValue());
+
+  std::string Annotation = R"({"kind": "mql-property", "args": [)";
+  for (auto PropTok = Info->PropertyNameAndArgumentTokens.begin();
+       Info->PropertyNameAndArgumentTokens.end() != PropTok;
+       ++PropTok) {
+    if (Info->PropertyNameAndArgumentTokens.begin() == PropTok) {
+      // The first token is the property's name
+      assert(PropTok->is(tok::identifier) && "#property's name must be an indentifier");
+      Annotation += "\"";
+      Annotation += PropTok->getIdentifierInfo()->getName();
+      Annotation += "\"";
+    } else if (PropTok->isLiteral()) {
+      // We reached the property's arguments
+      Annotation += ", ";
+      
+      auto LiteralLength = PropTok->getLength();
+
+      const auto IsStringLiteral = isStringLiteral(PropTok->getKind());
+      if (IsStringLiteral) {
+        --LiteralLength;
+        Annotation += "\"\\";
+      }
+
+      Annotation += StringRef(PropTok->getLiteralData(), LiteralLength);
+
+      if (IsStringLiteral)
+        Annotation += "\\\"\"";
+    }
+  }
+  Annotation += "]}";
+
+  QualType CharTyConst = Actions.Context.CharTy;
+  // A C++ string literal has a const-qualified element type (C++ 2.13.4p1).
+  if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
+    CharTyConst.addConst();
+
+  const auto CharByteWidth = PP.getTargetInfo().getCharWidth() / 8;
+  const auto NumStringChars = Annotation.size() / CharByteWidth;
+
+  // Get an array type for the string, according to C99 6.4.5.  This includes
+  // the nul terminator character as well as the string length for pascal
+  // strings.
+  const QualType StrTy = Actions.Context.getConstantArrayType(CharTyConst,
+                                 llvm::APInt(32, NumStringChars+1),
+                                 ArrayType::Normal, 0);
+
+  SmallVector<SourceLocation, 1> StringTokLocs = { SourceLocation() };
+
+  // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
+  auto * Lit = StringLiteral::Create(Actions.Context, Annotation,
+                                     StringLiteral::Ascii, /*Pascal=*/false, StrTy,
+                                     &StringTokLocs[0], StringTokLocs.size());
+  ArgsVector ArgExprs = { Lit };
+
+  auto AttrName = PP.getIdentifierInfo("annotate");
+  attrs.addNew(AttrName, SourceRange(Tok.getLocation(), Tok.getAnnotationEndLoc()), 
+               /*ScopeName=*/nullptr, /*ScopeLoc=*/SourceLocation(),
+               /*args=*/ArgExprs.data(), /*numArgs=*/ArgExprs.size(), AttributeList::AS_GNU);
+
+  // Either a C++11 empty-declaration or attribute-declaration.
+  //SingleDecl = Actions.ActOnEmptyDeclaration(getCurScope(),
+  //                                           attrs.getList(),
+  //                                           Tok.getLocation());
+  auto & ASTContext = Actions.Context;
+  ASTContext.getTranslationUnitDecl()->addAttr(
+    ::new (ASTContext) AnnotateAttr(attrs.getList()->getRange(), 
+                                    ASTContext, Annotation,
+                                    attrs.getList()->getAttributeSpellingListIndex()));
+  ConsumeAnnotationToken();
+}
 
 /// \brief Lex an MQL function for late parsing.
 void Parser::lexFunctionForLateParsing(CachedTokens &BodyToks) {

@@ -1321,6 +1321,11 @@ private:
 
   DeclGroupPtrTy ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
                                           ParsingDeclSpec *DS = nullptr);
+
+  /// \brief Handle the annotation token produced for
+  /// #property ...
+  void handleDirectiveProperty(ParsedAttributesWithRange &attrs);
+
   bool isDeclarationAfterDeclarator();
   bool isStartOfFunctionDefinition(const ParsingDeclarator &Declarator);
   DeclGroupPtrTy ParseDeclarationOrFunctionDefinition(
