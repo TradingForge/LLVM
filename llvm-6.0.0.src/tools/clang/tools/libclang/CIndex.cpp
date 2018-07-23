@@ -8219,6 +8219,73 @@ void clang::PrintLibclangResourceUsage(CXTranslationUnit TU) {
 }
 
 //===----------------------------------------------------------------------===//
+// Information for binary operations
+//===----------------------------------------------------------------------===//
+
+enum CXBinaryOperationKind
+clang_Cursor_getBinaryOperationKind(CXCursor Cursor) {
+  if (!clang_isExpression(Cursor.kind))
+    return CXBinaryOperationKind_Invalid;
+
+  const auto *E = getCursorExpr(Cursor);
+  const auto *BinOp = dyn_cast_or_null<BinaryOperator>(E);
+  if (NULL == BinOp)
+    return CXBinaryOperationKind_Invalid;
+
+  const auto opcode = BinOp->getOpcode();
+  if (opcode > CXBinaryOperationKind_Last)
+    return CXBinaryOperationKind_Unexposed;
+
+  return (CXBinaryOperationKind)opcode;
+}
+
+CXString clang_getBinaryOperationKindSpelling(CXBinaryOperationKind Kind) {
+  if (   Kind < CXBinaryOperationKind_First 
+      || Kind > CXBinaryOperationKind_Last) {
+    return cxstring::createNull();
+  }
+
+  switch ((BinaryOperator::Opcode)Kind) {
+#define BINARY_OPERATION(Name, Spelling) case BO_##Name: return cxstring::createDup(Spelling);
+#include "clang/AST/OperationKinds.def"
+  }
+  llvm_unreachable("Invalid OpCode!");
+}
+
+//===----------------------------------------------------------------------===//
+// Information for unary operations
+//===----------------------------------------------------------------------===//
+
+enum CXUnaryOperationKind clang_Cursor_getUnaryOperationKind(CXCursor Cursor) {
+  if (!clang_isExpression(Cursor.kind))
+    return CXUnaryOperationKind_Invalid;
+
+  const auto *E = getCursorExpr(Cursor);
+  const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(E);
+  if (NULL == UnaryOp)
+    return CXUnaryOperationKind_Invalid;
+
+  const auto opcode = UnaryOp->getOpcode();
+  if (opcode > CXUnaryOperationKind_Last)
+    return CXUnaryOperationKind_Unexposed;
+
+  return (CXUnaryOperationKind)opcode;
+}
+
+CXString clang_getUnaryOperationKindSpelling(CXUnaryOperationKind Kind) {
+  if (   Kind < CXUnaryOperationKind_First 
+      || Kind > CXUnaryOperationKind_Last) {
+    return cxstring::createNull();
+  }
+
+  switch ((UnaryOperator::Opcode)Kind) {
+#define UNARY_OPERATION(Name, Spelling) case UO_##Name: return cxstring::createDup(Spelling);
+#include "clang/AST/OperationKinds.def"
+  }
+  llvm_unreachable("Unknown unary operator");
+}
+
+//===----------------------------------------------------------------------===//
 // Misc. utility functions.
 //===----------------------------------------------------------------------===//
 

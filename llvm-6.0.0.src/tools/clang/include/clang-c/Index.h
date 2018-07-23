@@ -3879,7 +3879,132 @@ CINDEX_LINKAGE CXCursor clang_getOverloadedDecl(CXCursor cursor,
 /**
  * @}
  */
-  
+
+/**
+ * \defgroup CINDEX_BINARY_OPERATIONS Information for binary operations
+ *
+ * @{
+ */
+
+// Operators listed in order of precedence.
+// Note that additions to this should also update the StmtVisitor class and
+// BinaryOperator::getOverloadedOperator.
+enum CXBinaryOperationKind {
+  CXBinaryOperationKind_First,
+  // [C++ 5.5] Pointer-to-member operators.
+  CXBinaryOperationKind_PtrMemD = CXBinaryOperationKind_First,
+  CXBinaryOperationKind_PtrMemI,
+  // [C99 6.5.5] Multiplicative operators.
+  CXBinaryOperationKind_Mul,
+  CXBinaryOperationKind_Div,
+  CXBinaryOperationKind_Rem,
+  // [C99 6.5.6] Additive operators.
+  CXBinaryOperationKind_Add,
+  CXBinaryOperationKind_Sub,
+  // [C99 6.5.7] Bitwise shift operators.
+  CXBinaryOperationKind_Shl,
+  CXBinaryOperationKind_Shr,
+  // C++20 [expr.spaceship] Three-way comparison operator.
+  CXBinaryOperationKind_Cmp,
+  // [C99 6.5.8] Relational operators.
+  CXBinaryOperationKind_LT,
+  CXBinaryOperationKind_GT,
+  CXBinaryOperationKind_LE,
+  CXBinaryOperationKind_GE,
+  // [C99 6.5.9] Equality operators.
+  CXBinaryOperationKind_EQ,
+  CXBinaryOperationKind_NE,
+  // [C99 6.5.10] Bitwise AND operator.
+  CXBinaryOperationKind_And,
+  // [C99 6.5.11] Bitwise XOR operator.
+  CXBinaryOperationKind_Xor,
+  // [C99 6.5.12] Bitwise OR operator.
+  CXBinaryOperationKind_Or,
+  // [C99 6.5.13] Logical AND operator.
+  CXBinaryOperationKind_LAnd,
+  // [C99 6.5.14] Logical OR operator.
+  CXBinaryOperationKind_LOr,
+  // [C99 6.5.16] Assignment operators.
+  CXBinaryOperationKind_Assign,
+  CXBinaryOperationKind_MulAssign,
+  CXBinaryOperationKind_DivAssign,
+  CXBinaryOperationKind_RemAssign,
+  CXBinaryOperationKind_AddAssign,
+  CXBinaryOperationKind_SubAssign,
+  CXBinaryOperationKind_ShlAssign,
+  CXBinaryOperationKind_ShrAssign,
+  CXBinaryOperationKind_AndAssign,
+  CXBinaryOperationKind_XorAssign,
+  CXBinaryOperationKind_OrAssign,
+  // [C99 6.5.17] Comma operator.
+  CXBinaryOperationKind_Comma,
+  CXBinaryOperationKind_Last = CXBinaryOperationKind_Comma,
+
+  CXBinaryOperationKind_Unexposed = 0xFFFE,
+  CXBinaryOperationKind_Invalid = 0xFFFF
+};
+
+/**
+ * \brief Returns the opcode/kind for a binary operator.
+ *
+ * If the passed in Cursor is not a binary operator expression,
+ * CXBinaryOperationKind_Invalid is returned else the opcode/kind.
+ */
+CINDEX_LINKAGE enum CXBinaryOperationKind clang_Cursor_getBinaryOperationKind(CXCursor);
+CINDEX_LINKAGE CXString clang_getBinaryOperationKindSpelling(CXBinaryOperationKind);
+
+/**
+ * @}
+ */
+
+/**
+ * \defgroup CINDEX_UNARY_OPERATIONS Information for unary operations
+ *
+ * @{
+ */
+
+enum CXUnaryOperationKind {
+  CXUnaryOperationKind_First,
+  // [C99 6.5.2.4] Postfix increment and decrement
+  CXUnaryOperationKind_PostInc = CXUnaryOperationKind_First,
+  CXUnaryOperationKind_PostDec,
+  // [C99 6.5.3.1] Prefix increment and decrement 
+  CXUnaryOperationKind_PreInc,
+  CXUnaryOperationKind_PreDec,
+  // [C99 6.5.3.2] Address and indirection
+  CXUnaryOperationKind_AddrOf,
+  CXUnaryOperationKind_Deref,
+  // [C99 6.5.3.3] Unary arithmetic 
+  CXUnaryOperationKind_Plus,
+  CXUnaryOperationKind_Minus,
+  CXUnaryOperationKind_Not,
+  CXUnaryOperationKind_LNot,
+  // "__real expr"/"__imag expr" Extension.
+  CXUnaryOperationKind_Real,
+  CXUnaryOperationKind_Imag,
+  // __extension__ marker.
+  CXUnaryOperationKind_Extension,
+  // [C++ Coroutines] co_await operator
+  CXUnaryOperationKind_Coawait,
+  CXUnaryOperationKind_Last = CXUnaryOperationKind_Coawait,
+
+  CXUnaryOperationKind_Unexposed = 0xFFFE,
+  CXUnaryOperationKind_Invalid = 0xFFFF
+};
+
+/**
+ * \brief Returns the opcode/kind for an unary operator.
+ *
+ * If the passed in Cursor is not an unary operator expression,
+ * CXUnaryOperationKind_Invalid is returned else the opcode/kind.
+ */
+CINDEX_LINKAGE enum CXUnaryOperationKind clang_Cursor_getUnaryOperationKind(CXCursor);
+CINDEX_LINKAGE CXString clang_getUnaryOperationKindSpelling(CXUnaryOperationKind);
+
+/**
+ * @}
+ */
+
 /**
  * \defgroup CINDEX_ATTRIBUTES Information for attributes
  *
