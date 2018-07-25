@@ -3958,6 +3958,18 @@ CINDEX_LINKAGE CXString clang_getBinaryOperationKindSpelling(CXBinaryOperationKi
  */
 
 /**
+ * \brief Returns the opcode/kind for a compound assignment.
+ *
+ * If the passed in Cursor is not a compound assignment expression,
+ * CXBinaryOperationKind_Invalid is returned else the opcode/kind.
+ */
+CINDEX_LINKAGE enum CXBinaryOperationKind clang_Cursor_getCompoundAssignOperatorKind(CXCursor);
+
+/**
+ * @}
+ */
+
+/**
  * \defgroup CINDEX_UNARY_OPERATIONS Information for unary operations
  *
  * @{

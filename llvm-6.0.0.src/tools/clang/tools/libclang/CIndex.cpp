@@ -8252,6 +8252,24 @@ CXString clang_getBinaryOperationKindSpelling(CXBinaryOperationKind Kind) {
   llvm_unreachable("Invalid OpCode!");
 }
 
+enum CXBinaryOperationKind 
+clang_Cursor_getCompoundAssignOperatorKind(CXCursor Cursor) {
+  if (!clang_isExpression(Cursor.kind))
+    return CXBinaryOperationKind_Invalid;
+
+  const auto *E = getCursorExpr(Cursor);
+  const auto *CompoundAssignOp = dyn_cast_or_null<CompoundAssignOperator>(E);
+  if (NULL == CompoundAssignOp)
+    return CXBinaryOperationKind_Invalid;
+
+  const auto opcode = CompoundAssignOp->getOpcode();
+  if (opcode > CXBinaryOperationKind_Last)
+    return CXBinaryOperationKind_Unexposed;
+
+  return (CXBinaryOperationKind)opcode;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Information for unary operations
 //===----------------------------------------------------------------------===//
