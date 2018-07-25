@@ -8269,7 +8269,6 @@ clang_Cursor_getCompoundAssignOperatorKind(CXCursor Cursor) {
   return (CXBinaryOperationKind)opcode;
 }
 
-
 //===----------------------------------------------------------------------===//
 // Information for unary operations
 //===----------------------------------------------------------------------===//
@@ -8301,6 +8300,62 @@ CXString clang_getUnaryOperationKindSpelling(CXUnaryOperationKind Kind) {
 #include "clang/AST/OperationKinds.def"
   }
   llvm_unreachable("Unknown unary operator");
+}
+
+//===----------------------------------------------------------------------===//
+// Information for for statement
+//===----------------------------------------------------------------------===//
+
+namespace {
+  const ForStmt * getCursorForStmt(CXCursor Cursor) {
+    if (!clang_isStatement(Cursor.kind)) {
+      return nullptr;
+    }
+
+    const Stmt *S = getCursorStmt(Cursor);
+    const auto *For = dyn_cast_or_null<ForStmt>(S);
+    return For;
+  }
+}
+
+unsigned clang_Cursor_hasForStmtInit(CXCursor Cursor) {
+  if (const auto * For = getCursorForStmt(Cursor)) {
+    return For->getInit() != nullptr;
+  }
+
+  return 0;
+}
+
+unsigned clang_Cursor_hasForStmtCondVar(CXCursor Cursor) {
+  if (const auto * For = getCursorForStmt(Cursor)) {
+    return For->getConditionVariableDeclStmt() != nullptr;
+  }
+
+  return 0;
+}
+
+unsigned clang_Cursor_hasForStmtCond(CXCursor Cursor) {
+  if (const auto * For = getCursorForStmt(Cursor)) {
+    return For->getCond() != nullptr;
+  }
+
+  return 0;
+}
+
+unsigned clang_Cursor_hasForStmtInc(CXCursor Cursor) {
+  if (const auto * For = getCursorForStmt(Cursor)) {
+    return For->getInc() != nullptr;
+  }
+
+  return 0;
+}
+
+unsigned clang_Cursor_hasForStmtBody(CXCursor Cursor) {
+  if (const auto * For = getCursorForStmt(Cursor)) {
+    return For->getBody() != nullptr;
+  }
+
+  return 0;
 }
 
 //===----------------------------------------------------------------------===//

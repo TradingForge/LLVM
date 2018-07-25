@@ -3975,6 +3975,24 @@ CINDEX_LINKAGE enum CXBinaryOperationKind clang_Cursor_getCompoundAssignOperator
  * @}
  */
 
+
+/**
+ * \defgroup CINDEX_FOR_STMT Information for for statement
+ *
+ * @{
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_hasForStmtInit(CXCursor Cursor);
+CINDEX_LINKAGE unsigned clang_Cursor_hasForStmtCondVar(CXCursor Cursor);
+CINDEX_LINKAGE unsigned clang_Cursor_hasForStmtCond(CXCursor Cursor);
+CINDEX_LINKAGE unsigned clang_Cursor_hasForStmtInc(CXCursor Cursor);
+CINDEX_LINKAGE unsigned clang_Cursor_hasForStmtBody(CXCursor Cursor);
+
+/**
+ * @}
+ */
+
+
 /**
  * \defgroup CINDEX_UNARY_OPERATIONS Information for unary operations
  *
