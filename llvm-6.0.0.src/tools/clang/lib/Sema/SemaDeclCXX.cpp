@@ -12783,7 +12783,8 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
           auto const & PointeeType = LHSType->getPointeeType();
           Valid = PointeeType.isConstQualified() && 
                   PointeeType->isCharType();
-        } else if (LangOpts.MQL && Op == OO_Plus && 
+        }
+      } else if (LangOpts.MQL && Op == OO_Plus && 
           FnDecl->parameters().size() == 2) {
         auto const & RHSType = FnDecl->parameters().back()
                                          ->getType();
@@ -12793,6 +12794,7 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
                   PointeeType->isCharType();
         }
       }
+        
 
       if (!Valid) {
         return Diag(FnDecl->getLocation(),
