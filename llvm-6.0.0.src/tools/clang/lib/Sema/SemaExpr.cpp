@@ -12233,6 +12233,16 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
           return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
       }
     }
+    if (LangOpts.MQL && Opc == BO_Add) {
+      auto const & RHSType = RHSExpr->getType();
+      if (const ArrayType *ATy = 
+            dyn_cast<ConstantArrayType>(RHSType.getTypePtr())) {
+        auto const & ElementType = ATy->getElementType();
+        if (ElementType.isConstQualified() && 
+            ElementType->isCharType())
+          return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
+      }
+    }
   }
 
   // Build a built-in binary operation.

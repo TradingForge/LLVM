@@ -12783,6 +12783,14 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
           auto const & PointeeType = LHSType->getPointeeType();
           Valid = PointeeType.isConstQualified() && 
                   PointeeType->isCharType();
+        } else if (LangOpts.MQL && Op == OO_Plus && 
+          FnDecl->parameters().size() == 2) {
+        auto const & RHSType = FnDecl->parameters().back()
+                                         ->getType();
+        if (RHSType->isPointerType()) {
+          auto const & PointeeType = RHSType->getPointeeType();
+          Valid = PointeeType.isConstQualified() && 
+                  PointeeType->isCharType();
         }
       }
 

@@ -5891,6 +5891,17 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
         return true;
     }
   }
+  
+  if (Context.getLangOpts().MQL && 
+    Fn->getOverloadedOperator() == OO_Plus) {
+    if (const ArrayType *ATy = 
+          dyn_cast<ConstantArrayType>(T2.getTypePtr())) {
+      auto const & ElementType = ATy->getElementType();
+      if (ElementType.isConstQualified() && 
+          ElementType->isCharType())
+        return true;
+    }
+  }
 
   return false;
 }
