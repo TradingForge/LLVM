@@ -2959,9 +2959,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       if (checkUsingShadowRedecl<FunctionDecl>(*this, Shadow, New))
         return true;
       OldD = Old = cast<FunctionDecl>(Shadow->getTargetDecl());
-    } else 
-//        if (!getLangOpts().MQL) 
-        {
+           // In MQL a var and a function in the same scope 
+           // are allowed to have the same name.
+    } else if (getLangOpts().MQL && dyn_cast<VarDecl>(OldD)) {
+      return false;
+    } else {
       Diag(New->getLocation(), diag::err_redefinition_different_kind)
         << New->getDeclName();
       notePreviousDefinition(OldD, New->getLocation());
@@ -3764,6 +3766,11 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     }
   }
   if (!Old) {
+    // In MQL a var and a function in the same scope 
+    // are allowed to have the same name.
+    if (getLangOpts().MQL && dyn_cast<FunctionDecl>(Previous.getFoundDecl()))
+      return;
+
     Diag(New->getLocation(), diag::err_redefinition_different_kind)
         << New->getDeclName();
     notePreviousDefinition(Previous.getRepresentativeDecl(),
@@ -9284,10 +9291,16 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
     } else {
       if (shouldLinkDependentDeclWithPrevious(NewFD, OldDecl)) {
-        // This needs to happen first so that 'inline' propagates.
-        NewFD->setPreviousDeclaration(cast<FunctionDecl>(OldDecl));
-        if (isa<CXXMethodDecl>(NewFD))
-          NewFD->setAccess(OldDecl->getAccess());
+        // In MQL a var and a function in the same scope 
+        // are allowed to have the same name.
+        // Hence in MQL mode we make sure OldDecl can be casted to FunctionDecl
+        // before actually casting.
+        if (!getLangOpts().MQL || isa<FunctionDecl>(OldDecl)) {
+          // This needs to happen first so that 'inline' propagates.
+          NewFD->setPreviousDeclaration(cast<FunctionDecl>(OldDecl));
+          if (isa<CXXMethodDecl>(NewFD))
+            NewFD->setAccess(OldDecl->getAccess());
+        }
       }
     }
   } else if (!getLangOpts().CPlusPlus && MayNeedOverloadableChecks &&
