@@ -2959,7 +2959,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       if (checkUsingShadowRedecl<FunctionDecl>(*this, Shadow, New))
         return true;
       OldD = Old = cast<FunctionDecl>(Shadow->getTargetDecl());
-    } else {
+    } else 
+//        if (!getLangOpts().MQL) 
+        {
       Diag(New->getLocation(), diag::err_redefinition_different_kind)
         << New->getDeclName();
       notePreviousDefinition(OldD, New->getLocation());

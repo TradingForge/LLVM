@@ -4041,6 +4041,112 @@ CINDEX_LINKAGE CXString clang_getUnaryOperationKindSpelling(CXUnaryOperationKind
  * @}
  */
 
+enum CXCastOperationKind
+{
+    CXCastOperationKind_First = 0,
+    CXCastOperationKind_Dependent = 0,
+    CXCastOperationKind_BitCast = 1,
+    CXCastOperationKind_LValueBitCast = 2,
+    CXCastOperationKind_LValueToRValue = 3,
+    CXCastOperationKind_NoOp = 4,
+    CXCastOperationKind_BaseToDerived = 5,
+    CXCastOperationKind_DerivedToBase = 6,
+    CXCastOperationKind_UncheckedDerivedToBase = 7,
+    CXCastOperationKind_Dynamic = 8,
+    CXCastOperationKind_ToUnion = 9,
+    CXCastOperationKind_ArrayToPointerDecay = 10,
+    CXCastOperationKind_FunctionToPointerDecay = 11,
+    CXCastOperationKind_NullToPointer = 12,
+    CXCastOperationKind_NullToMemberPointer = 13,
+    CXCastOperationKind_BaseToDerivedMemberPointer = 14,
+    CXCastOperationKind_DerivedToBaseMemberPointer = 15,
+    CXCastOperationKind_MemberPointerToBoolean = 16,
+    CXCastOperationKind_ReinterpretMemberPointer = 17,
+    CXCastOperationKind_UserDefinedConversion = 18,
+    CXCastOperationKind_ConstructorConversion = 19,
+    CXCastOperationKind_IntegralToPointer = 20,
+    CXCastOperationKind_PointerToIntegral = 21,
+    CXCastOperationKind_PointerToBoolean = 22,
+    CXCastOperationKind_ToVoid = 23,
+    CXCastOperationKind_VectorSplat = 24,
+    CXCastOperationKind_IntegralCast = 25,
+    CXCastOperationKind_IntegralToBoolean = 26,
+    CXCastOperationKind_IntegralToFloating = 27,
+    CXCastOperationKind_FloatingToIntegral = 28,
+    CXCastOperationKind_FloatingToBoolean = 29,
+    CXCastOperationKind_BooleanToSignedIntegral = 30,
+    CXCastOperationKind_FloatingCast = 31,
+    CXCastOperationKind_CPointerToObjCPointerCast = 32,
+    CXCastOperationKind_BlockPointerToObjCPointerCast = 33,
+    CXCastOperationKind_AnyPointerToBlockPointerCast = 34,
+    CXCastOperationKind_ObjCObjectLValueCast = 35,
+    CXCastOperationKind_FloatingRealToComplex = 36,
+    CXCastOperationKind_FloatingComplexToReal = 37,
+    CXCastOperationKind_FloatingComplexToBoolean = 38,
+    CXCastOperationKind_FloatingComplexCast = 39,
+    CXCastOperationKind_FloatingComplexToIntegralComplex = 40,
+    CXCastOperationKind_IntegralRealToComplex = 41,
+    CXCastOperationKind_IntegralComplexToReal = 42,
+    CXCastOperationKind_IntegralComplexToBoolean = 43,
+    CXCastOperationKind_IntegralComplexCast = 44,
+    CXCastOperationKind_IntegralComplexToFloatingComplex = 45,
+    CXCastOperationKind_ARCProduceObject = 46,
+    CXCastOperationKind_ARCConsumeObject = 47,
+    CXCastOperationKind_ARCReclaimReturnedObject = 48,
+    CXCastOperationKind_ARCExtendBlockObject = 49,
+    CXCastOperationKind_AtomicToNonAtomic = 50,
+    CXCastOperationKind_NonAtomicToAtomic = 51,
+    CXCastOperationKind_CopyAndAutoreleaseBlockObject = 52,
+    CXCastOperationKind_BuiltinFnToFnPtr = 53,
+    CXCastOperationKind_ZeroToOCLEvent = 54,
+    CXCastOperationKind_ZeroToOCLQueue = 55,
+    CXCastOperationKind_AddressSpaceConversion = 56,
+    CXCastOperationKind_IntToOCLSampler = 57,
+    CXCastOperationKind_Last = 57,
+    CXCastOperationKind_Unexposed = 65534,
+    CXCastOperationKind_Invalid = 65535
+};
+
+CINDEX_LINKAGE enum CXCastOperationKind clang_Cursor_getCastOperationKind(CXCursor);
+
+enum CXInitializationStyle
+{
+    CXInitializationStyle_First = 0,
+    CXInitializationStyle_CInit = 0,
+    CXInitializationStyle_CallInit = 1,
+    CXInitializationStyle_ListInit = 2,
+    CXInitializationStyle_Last = 2,
+    CXInitializationStyle_Unexposed = 65534,
+    CXInitializationStyle_Invalid = 65535
+};
+
+CINDEX_LINKAGE enum CXInitializationStyle clang_Cursor_getInitializationStyle(CXCursor);
+
+CINDEX_LINKAGE CXCursor clang_Cursor_getInit(CXCursor);
+
+//CINDEX_LINKAGE CXSourceRange clang_getCursorSpellingExtent(CXCursor);
+
+enum CXCallExprKind
+{
+    CXCallExprKind_First = 0,
+    CXCallExprKind_CallExpr = 0,
+    CXCallExprKind_CXXOperatorCallExpr = 1,
+    CXCallExprKind_CXXMemberCallExpr = 2,
+    CXCallExprKind_CUDAKernelCallExpr = 3,
+    CXCallExprKind_CXXConstructExpr = 4,
+    CXCallExprKind_CXXInheritedCtorInitExpr = 5,
+    CXCallExprKind_CXXTemporaryObjectExpr = 6,
+    CXCallExprKind_CXXUnresolvedConstructExpr = 7,
+    CXCallExprKind_UserDefinedLiteral = 8,
+    CXCallExprKind_Last = 8,
+    CXCallExprKind_Unexposed = 65534,
+    CXCallExprKind_Invalid = 65535
+};
+
+CINDEX_LINKAGE enum CXCallExprKind clang_Cursor_getCallExprKind(CXCursor);
+
+CINDEX_LINKAGE CXString clang_Cursor_getStringLiteralData(CXCursor);
+
 /**
  * \defgroup CINDEX_ATTRIBUTES Information for attributes
  *

@@ -8303,6 +8303,120 @@ CXString clang_getUnaryOperationKindSpelling(CXUnaryOperationKind Kind) {
 }
 
 //===----------------------------------------------------------------------===//
+
+enum CXCastOperationKind clang_Cursor_getCastOperationKind(CXCursor Cursor) {
+  if (!clang_isExpression(Cursor.kind))
+    return CXCastOperationKind_Invalid;
+  
+  const auto *E = getCursorExpr(Cursor);
+  const auto *CastOp = dyn_cast_or_null<CastExpr>(E);
+  if (NULL == CastOp)
+    return CXCastOperationKind_Invalid;
+
+  const auto opcode = CastOp->getCastKind();
+  if (opcode > CXUnaryOperationKind_Last)
+    return CXCastOperationKind_Unexposed;
+
+  return (CXCastOperationKind)opcode;
+}
+
+enum CXInitializationStyle clang_Cursor_getInitializationStyle(CXCursor Cursor) {
+  if (!clang_isDeclaration(Cursor.kind))
+    return CXInitializationStyle_Invalid;
+  
+  const auto *D = getCursorDecl(Cursor);
+  const auto *VarD = dyn_cast_or_null<VarDecl>(D);
+  if (NULL == VarD)
+    return CXInitializationStyle_Invalid;
+  
+  const auto initStyle = VarD->getInitStyle();
+  if (initStyle > CXInitializationStyle_Last)
+    return CXInitializationStyle_Unexposed;
+
+  return (CXInitializationStyle)initStyle;
+}
+
+CXCursor clang_Cursor_getInit(CXCursor Cursor) {
+  if (!clang_isDeclaration(Cursor.kind))
+    return clang_getNullCursor();
+  
+  const auto *D = getCursorDecl(Cursor);
+  const auto *VarD = dyn_cast_or_null<VarDecl>(D);
+  if (NULL == VarD)
+    return clang_getNullCursor();
+    
+  const auto *Init = VarD->getInit();
+  if (NULL == Init)
+    return clang_getNullCursor();
+
+  return clang::cxcursor::MakeCXCursor(Init, D, getCursorTU(Cursor));
+}
+
+enum CXCallExprKind clang_Cursor_getCallExprKind(CXCursor Cursor) {
+  if (!clang_isExpression(Cursor.kind) || clang_getCursorKind(Cursor) != CXCursor_CallExpr)
+    return CXCallExprKind_Invalid;
+  
+  const auto *E = getCursorExpr(Cursor);
+  
+  if (const auto *OpCallExpr = dyn_cast_or_null<CXXOperatorCallExpr>(E)) {
+      return CXCallExprKind_CXXOperatorCallExpr;
+  }
+  if (const auto *MemberCallExpr = dyn_cast_or_null<CXXMemberCallExpr>(E)) {
+      return CXCallExprKind_CXXMemberCallExpr;
+  }
+  if (const auto *CUDEKernelCallExpr = dyn_cast_or_null<CUDAKernelCallExpr>(E)) {
+      return CXCallExprKind_CUDAKernelCallExpr;
+  }
+  if (const auto *ConstructCallExpr = dyn_cast_or_null<CXXConstructExpr>(E)) {
+      return CXCallExprKind_CXXConstructExpr;
+  }
+  if (const auto *InheritedCtorInitExpr = dyn_cast_or_null<CXXInheritedCtorInitExpr>(E)) {
+      return CXCallExprKind_CXXInheritedCtorInitExpr;
+  }
+  if (const auto *TemporaryObjectExpr = dyn_cast_or_null<CXXTemporaryObjectExpr>(E)) {
+      return CXCallExprKind_CXXTemporaryObjectExpr;
+  }
+  if (const auto *UnresolvedConstructExpr = dyn_cast_or_null<CXXUnresolvedConstructExpr>(E)) {
+      return CXCallExprKind_CXXUnresolvedConstructExpr;
+  }
+  if (const auto *UserDefinedLiteralExpr = dyn_cast_or_null<UserDefinedLiteral>(E)) {
+      return CXCallExprKind_UserDefinedLiteral;
+  }
+  if (const auto *_CallExpr = dyn_cast_or_null<CallExpr>(E)) {
+      return CXCallExprKind_CallExpr;
+  }
+  return CXCallExprKind_Invalid;
+}
+
+CXString clang_Cursor_getStringLiteralData(CXCursor Cursor) {
+    if (!clang_isExpression(Cursor.kind) || clang_getCursorKind(Cursor) != CXCursor_StringLiteral) {
+        return cxstring::createNull();
+    }
+    const auto *E = getCursorExpr(Cursor);
+    if (const StringLiteral * StrLiteral = dyn_cast<StringLiteral>(E)) {
+        return cxstring::createDup(StrLiteral->getString());
+    }
+    return cxstring::createNull();
+}
+
+//CXSourceRange clang_getCursorSpellingExtent(CXCursor Cursor) {
+//    
+//    const auto *S = getCursorStmt(Cursor);
+//    
+//    const auto Context = cxcursor::getCursorContext(Cursor);
+//  cxloc::translateSourceLocation(Context, S->getLocStart());
+//  const auto *VarD = dyn_cast_or_null<VarDecl>(D);
+//  if (NULL == VarD)
+//    return clang_getNullCursor();
+//    
+//  const auto *Init = VarD->getInit();
+//  if (NULL == Init)
+//    return clang_getNullCursor();
+//  
+//  return getCursor(clang_Cursor_getTranslationUnit(Cursor), Init->getExprLoc());;
+//}
+
+//===----------------------------------------------------------------------===//
 // Information for for statement
 //===----------------------------------------------------------------------===//
 
