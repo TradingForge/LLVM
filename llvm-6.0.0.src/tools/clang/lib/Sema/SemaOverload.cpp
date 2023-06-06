@@ -8729,7 +8729,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
   case OO_LessEqual:
   case OO_GreaterEqual:
       if (Args.size() == 2 && (isa<EnumType>(Args.front()->getType()) || isa<EnumType>(Args.back()->getType()))) {
-          OpBuilder.addRelationalPointerOrEnumeralOverloads();
+          OpBuilder.addEqualEqualOrNotEqualMemberPointerOrNullptrOverloads();
           break;
       }
     OpBuilder.addRelationalPointerOrEnumeralOverloads();
