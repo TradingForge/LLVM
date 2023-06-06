@@ -1823,6 +1823,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              (From->EvaluateKnownConstInt(S.getASTContext()) == 0)) {
     SCS.Second = ICK_Zero_Queue_Conversion;
     FromType = ToType;
+  } else if (isa<EnumType>(ToType.getCanonicalType()) &&
+          (FromType->isArithmeticType() || isa<EnumType>(FromType.getCanonicalType()))) {
+      SCS.Second = ICK_Compatible_Conversion;
+      FromType = ToType.getUnqualifiedType();
   } else {
     // No second conversion required.
     SCS.Second = ICK_Identity;
@@ -8715,12 +8719,19 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
   case OO_EqualEqual:
   case OO_ExclaimEqual:
     OpBuilder.addEqualEqualOrNotEqualMemberPointerOrNullptrOverloads();
+    if (Args.size() == 2 && (isa<EnumType>(Args.front()->getType()) || isa<EnumType>(Args.back()->getType()))) {
+        break;            
+    }
     LLVM_FALLTHROUGH;
 
   case OO_Less:
   case OO_Greater:
   case OO_LessEqual:
   case OO_GreaterEqual:
+      if (Args.size() == 2 && (isa<EnumType>(Args.front()->getType()) || isa<EnumType>(Args.back()->getType()))) {
+          OpBuilder.addRelationalPointerOrEnumeralOverloads();
+          break;
+      }
     OpBuilder.addRelationalPointerOrEnumeralOverloads();
     OpBuilder.addGenericBinaryArithmeticOverloads();
     break;
@@ -8794,6 +8805,12 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
     OpBuilder.addConditionalOperatorOverloads();
     OpBuilder.addGenericBinaryArithmeticOverloads();
     break;
+  }
+  if (Args.size() == 2 && (isa<EnumType>(Args.front()->getType()) || isa<EnumType>(Args.back()->getType()))) {
+//      for (auto i = CandidateSet.begin(); i != CandidateSet.end(); ++i) {
+//          OverloadCandidate candidate = *i;
+//          candidate.Conversions[0]
+//      }
   }
 }
 
